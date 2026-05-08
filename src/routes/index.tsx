@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle } from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle, Play } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -113,7 +113,8 @@ function ModelsPage() {
             </button>
           </div>
           {active === "Details" && <DetailsTab />}
-          {active !== "Details" && (
+          {active === "Timeline" && <TimelineTab />}
+          {active === "Predictions" && (
             <div className="bg-white border border-[#E5E7EB] rounded-md min-h-[400px]" />
           )}
         </main>
