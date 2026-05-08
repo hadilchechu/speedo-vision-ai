@@ -182,3 +182,134 @@ function DetailsTab() {
     </div>
   );
 }
+
+type Detection = {
+  id: number;
+  time: string;
+  position: number; // % along scrubber
+  confidence: number;
+  area: number;
+  status: "confirmed" | "dismissed" | "pending";
+  // bounding box on video, % units
+  box: { left: number; top: number; width: number; height: number };
+};
+
+const initialDetections: Detection[] = [
+  { id: 1, time: "00:12", position: 8, confidence: 94, area: 12.4, status: "confirmed", box: { left: 18, top: 22, width: 28, height: 30 } },
+  { id: 2, time: "00:42", position: 24, confidence: 88, area: 8.1, status: "confirmed", box: { left: 50, top: 35, width: 22, height: 24 } },
+  { id: 3, time: "01:15", position: 42, confidence: 91, area: 15.7, status: "dismissed", box: { left: 30, top: 40, width: 35, height: 28 } },
+  { id: 4, time: "01:58", position: 65, confidence: 76, area: 5.3, status: "pending", box: { left: 60, top: 18, width: 18, height: 22 } },
+  { id: 5, time: "02:34", position: 86, confidence: 82, area: 9.6, status: "pending", box: { left: 22, top: 50, width: 26, height: 26 } },
+];
+
+function TimelineTab() {
+  const [detections, setDetections] = useState(initialDetections);
+  const [selected, setSelected] = useState<Detection | null>(null);
+
+  const confirmed = detections.filter((d) => d.status === "confirmed").length;
+  const dismissed = detections.filter((d) => d.status === "dismissed").length;
+  const pending = detections.filter((d) => d.status === "pending").length;
+
+  const updateStatus = (id: number, status: Detection["status"]) => {
+    setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, status } : d)));
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+        {/* Video player */}
+        <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+          <div className="relative w-full bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition">
+                <Play className="w-7 h-7 text-[#1f2937] ml-1" fill="currentColor" />
+              </button>
+            </div>
+            {selected && (
+              <div
+                className="absolute border-2 border-orange-500 bg-orange-500/30"
+                style={{
+                  left: `${selected.box.left}%`,
+                  top: `${selected.box.top}%`,
+                  width: `${selected.box.width}%`,
+                  height: `${selected.box.height}%`,
+                }}
+              >
+                <span className="absolute -top-6 left-0 bg-orange-500 text-white text-xs font-semibold px-2 py-0.5 rounded">
+                  Corrosion — {selected.confidence}%
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Scrubber */}
+          <div className="mt-4 px-1">
+            <div className="relative h-2 bg-gray-200 rounded-full">
+              <div className="absolute left-0 top-0 h-full w-1/4 bg-[#2E86AB] rounded-full" />
+              {detections.map((d) => (
+                <div
+                  key={d.id}
+                  className="group absolute -top-1 w-3 h-4 -translate-x-1/2 cursor-pointer"
+                  style={{ left: `${d.position}%` }}
+                  onClick={() => setSelected(d)}
+                >
+                  <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white shadow" />
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                    Corrosion detected — {d.confidence}% confidence
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-2">
+              <span>00:00</span>
+              <span>03:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Side panel */}
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <h3 className="text-base font-bold text-gray-900 mb-3">Frame Detections</h3>
+        <div className="text-xs text-gray-500 mb-4 pb-3 border-b border-[#F0F2F7]">
+          {detections.length} detections · {confirmed} confirmed · {dismissed} dismissed · {pending} pending
+        </div>
+        <div className="space-y-3">
+          {detections.map((d) => (
+            <div
+              key={d.id}
+              onClick={() => setSelected(d)}
+              className={`border rounded-md p-3 cursor-pointer transition ${
+                selected?.id === d.id ? "border-[#2E86AB] bg-[#EEF2FF]" : "border-[#E5E7EB] hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold text-gray-900">{d.time}</span>
+                <span className="text-xs text-gray-500 capitalize">{d.status}</span>
+              </div>
+              <div className="text-sm text-gray-700 mb-2">Corrosion Detected</div>
+              <div className="flex gap-4 text-xs mb-3">
+                <span className="text-[#2E86AB] font-semibold">{d.confidence}%</span>
+                <span className="text-[#2E86AB] font-semibold">Area {d.area}%</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateStatus(d.id, "confirmed"); }}
+                  className="flex-1 px-2 py-1 text-xs font-medium border border-[#2E9E8F] text-[#2E9E8F] hover:bg-[#2E9E8F] hover:text-white transition"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateStatus(d.id, "dismissed"); }}
+                  className="flex-1 px-2 py-1 text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
