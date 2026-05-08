@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown } from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -112,8 +112,71 @@ function ModelsPage() {
               Run Inspection
             </button>
           </div>
-          <div className="bg-white border border-[#E5E7EB] rounded-md min-h-[400px]" />
+          {active === "Details" && <DetailsTab />}
+          {active !== "Details" && (
+            <div className="bg-white border border-[#E5E7EB] rounded-md min-h-[400px]" />
+          )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Target;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-md bg-[#EEF2FF] flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#2E86AB]" />
+        </div>
+        <span className="text-sm text-gray-500">{label}</span>
+      </div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex text-sm py-2">
+      <span className="text-gray-500 w-40">{label}</span>
+      <span className="text-gray-400 mr-4">:</span>
+      <span className="font-semibold text-gray-900">{value}</span>
+    </div>
+  );
+}
+
+function DetailsTab() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard icon={Target} label="Model Accuracy" value="92%" />
+        <StatCard icon={Film} label="Frames Analysed" value="1,240 / 1,350" />
+        <StatCard icon={AlertTriangle} label="Defects Marked" value="347" />
+      </div>
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+        <h2 className="text-[18px] font-bold text-gray-900 mb-3">
+          Corrosion Detection — Video
+        </h2>
+        <p className="text-sm text-gray-600 leading-relaxed mb-6 max-w-3xl">
+          This pre-trained model detects and labels corrosion across video footage.
+          The AI scans each frame, flags defects, and prioritises by severity level.
+        </p>
+        <div className="divide-y divide-[#F0F2F7]">
+          <MetaRow label="Model Id" value="10019" />
+          <MetaRow label="Project Name" value="Project_corrosion_video" />
+          <MetaRow label="Type" value="Segmentation" />
+          <MetaRow label="Algorithm" value="MaskRCNN0" />
+          <MetaRow label="Created" value="08 May 2025" />
+        </div>
       </div>
     </div>
   );
