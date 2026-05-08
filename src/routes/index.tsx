@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle, Play } from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle, Play, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   component: ModelsPage,
@@ -19,9 +20,8 @@ function Sidebar() {
       className="fixed inset-y-0 left-0 w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
-      <div className="h-16 flex items-center gap-2 px-5 border-b border-[#E5E7EB]">
-        <div className="w-6 h-6 bg-[#2E86AB] rounded-sm" />
-        <span className="text-[17px] font-semibold text-gray-900">Speedo.ai</span>
+      <div className="h-16 flex items-center px-5 border-b border-[#E5E7EB]">
+        <img src={logoUrl} alt="Speedo.ai" className="h-8 w-auto" />
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
