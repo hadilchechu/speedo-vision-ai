@@ -114,9 +114,7 @@ function ModelsPage() {
           </div>
           {active === "Details" && <DetailsTab />}
           {active === "Timeline" && <TimelineTab />}
-          {active === "Predictions" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-md min-h-[400px]" />
-          )}
+          {active === "Predictions" && <PredictionsTab />}
         </main>
       </div>
     </div>
