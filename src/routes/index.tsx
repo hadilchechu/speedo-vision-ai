@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle, Play } from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, ChevronDown, Target, Film, AlertTriangle, Play, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   component: ModelsPage,
@@ -19,9 +20,8 @@ function Sidebar() {
       className="fixed inset-y-0 left-0 w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
-      <div className="h-16 flex items-center gap-2 px-5 border-b border-[#E5E7EB]">
-        <div className="w-6 h-6 bg-[#2E86AB] rounded-sm" />
-        <span className="text-[17px] font-semibold text-gray-900">Speedo.ai</span>
+      <div className="h-16 flex items-center px-5 border-b border-[#E5E7EB]">
+        <img src={logoUrl} alt="Speedo.ai" className="h-8 w-auto" />
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
@@ -114,9 +114,7 @@ function ModelsPage() {
           </div>
           {active === "Details" && <DetailsTab />}
           {active === "Timeline" && <TimelineTab />}
-          {active === "Predictions" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-md min-h-[400px]" />
-          )}
+          {active === "Predictions" && <PredictionsTab />}
         </main>
       </div>
     </div>
@@ -269,6 +267,7 @@ function TimelineTab() {
       </div>
 
       {/* Side panel */}
+      <div className="space-y-4">
       <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
         <h3 className="text-base font-bold text-gray-900 mb-3">Frame Detections</h3>
         <div className="text-xs text-gray-500 mb-4 pb-3 border-b border-[#F0F2F7]">
@@ -309,6 +308,110 @@ function TimelineTab() {
             </div>
           ))}
         </div>
+      </div>
+      <div className="relative bg-[#EEF2FF] border-l-[3px] border-[#2E86AB] rounded-r-md p-4">
+        <Sparkles className="absolute top-3 right-3 w-4 h-4 text-[#2E86AB]" />
+        <h4 className="text-sm font-bold text-gray-900 mb-2">AI Inspection Summary</h4>
+        <p className="text-xs text-gray-700 leading-relaxed pr-6">
+          Analysis complete. 5 instances of corrosion detected across 4:12 of footage.
+          Highest severity at 00:42 and 01:58. Estimated affected area: 12.4% of inspected surface.
+          Recommend immediate review of mid-section joints.
+        </p>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function PredictionStatCard({ icon: Icon, label, value, clickable }: { icon: typeof Target; label: string; value?: string; clickable?: boolean }) {
+  return (
+    <div className={`bg-white border border-[#E5E7EB] rounded-lg p-5 ${clickable ? "cursor-pointer hover:border-[#2E86AB] transition" : ""}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-md bg-[#EEF2FF] flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#2E86AB]" />
+        </div>
+        <span className="text-sm text-gray-500">{label}</span>
+      </div>
+      {value ? (
+        <div className="text-3xl font-bold text-gray-900">{value}</div>
+      ) : (
+        <div className="text-sm text-[#2E86AB] font-semibold">View all →</div>
+      )}
+    </div>
+  );
+}
+
+function PredictionsTab() {
+  const rows = [
+    { name: "Video_12", date: "08-May-2025", area: "12.4%" },
+    { name: "Video_13", date: "08-May-2025", area: "8.7%" },
+    { name: "Video_14", date: "08-May-2025", area: "15.2%" },
+  ];
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <PredictionStatCard icon={Gauge} label="Average Prediction Score" value="0.43" />
+        <PredictionStatCard icon={Crosshair} label="Mean Average Precision" value="0.8" />
+        <PredictionStatCard icon={BarChart3} label="Average Annotated Area" value="19%" />
+        <PredictionStatCard icon={MoreHorizontal} label="More Stats" clickable />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <select className="h-9 px-3 text-sm border border-[#E5E7EB] bg-white rounded-md text-gray-700">
+            <option>Prediction Time</option>
+          </select>
+          <select className="h-9 px-3 text-sm border border-[#E5E7EB] bg-white rounded-md text-gray-700">
+            <option>Newest</option>
+          </select>
+          <div className="flex items-center border border-[#E5E7EB] rounded-md bg-white ml-2">
+            <button className="p-2 text-[#2E86AB] border-r border-[#E5E7EB]"><Columns2 className="w-4 h-4" /></button>
+            <button className="p-2 text-gray-500 border-r border-[#E5E7EB] hover:text-[#2E86AB]"><LayoutGrid className="w-4 h-4" /></button>
+            <button className="p-2 text-gray-500 hover:text-[#2E86AB]"><List className="w-4 h-4" /></button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search"
+              className="h-9 pl-8 pr-3 text-sm border border-[#E5E7EB] bg-white rounded-md w-56 focus:outline-none focus:border-[#2E86AB]"
+            />
+          </div>
+          <button
+            className="px-4 py-2 border border-[#2E86AB] text-[#2E86AB] text-xs font-semibold uppercase tracking-wide hover:bg-[#2E86AB] hover:text-white transition-colors"
+            style={{ borderRadius: 0 }}
+          >
+            Export
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {rows.map((r) => (
+          <div key={r.name} className="bg-white border border-[#E5E7EB] rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="space-y-1.5 text-sm">
+              <div><span className="text-gray-500">Name: </span><span className="font-semibold text-gray-900">{r.name}</span></div>
+              <div><span className="text-gray-500">Created On: </span><span className="font-semibold text-gray-900">{r.date}</span></div>
+              <div><span className="text-gray-500">Area %: </span><span className="font-semibold text-[#2E86AB]">{r.area}</span></div>
+            </div>
+            <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
+              </div>
+              <span className="absolute bottom-2 left-2 text-[10px] text-white/70 uppercase tracking-wide">Original</span>
+            </div>
+            <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
+              </div>
+              <div className="absolute" style={{ left: "25%", top: "30%", width: "40%", height: "35%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
+              <div className="absolute" style={{ left: "55%", top: "55%", width: "20%", height: "20%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
+              <span className="absolute bottom-2 left-2 text-[10px] text-white/90 uppercase tracking-wide">Annotated</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
