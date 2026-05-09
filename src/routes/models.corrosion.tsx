@@ -111,15 +111,16 @@ type Detection = {
   confidence: number;
   area: number;
   status: "confirmed" | "dismissed" | "pending";
+  label: string;
   box: { left: number; top: number; width: number; height: number };
 };
 
 const initialDetections: Detection[] = [
-  { id: 1, time: "00:12", position: 8, confidence: 94, area: 12.4, status: "confirmed", box: { left: 18, top: 22, width: 28, height: 30 } },
-  { id: 2, time: "00:42", position: 24, confidence: 88, area: 8.1, status: "confirmed", box: { left: 50, top: 35, width: 22, height: 24 } },
-  { id: 3, time: "01:15", position: 42, confidence: 91, area: 15.7, status: "dismissed", box: { left: 30, top: 40, width: 35, height: 28 } },
-  { id: 4, time: "01:58", position: 65, confidence: 76, area: 5.3, status: "pending", box: { left: 60, top: 18, width: 18, height: 22 } },
-  { id: 5, time: "02:34", position: 86, confidence: 82, area: 9.6, status: "pending", box: { left: 22, top: 50, width: 26, height: 26 } },
+  { id: 1, time: "00:12", position: 8, confidence: 94, area: 12.4, status: "confirmed", label: "Corrosion Detected", box: { left: 18, top: 22, width: 28, height: 30 } },
+  { id: 2, time: "00:42", position: 24, confidence: 88, area: 8.1, status: "confirmed", label: "Corrosion Detected", box: { left: 50, top: 35, width: 22, height: 24 } },
+  { id: 3, time: "01:15", position: 42, confidence: 91, area: 15.7, status: "dismissed", label: "Corrosion Detected", box: { left: 30, top: 40, width: 35, height: 28 } },
+  { id: 4, time: "01:58", position: 65, confidence: 76, area: 5.3, status: "pending", label: "Corrosion Detected", box: { left: 60, top: 18, width: 18, height: 22 } },
+  { id: 5, time: "02:34", position: 86, confidence: 82, area: 9.6, status: "pending", label: "Corrosion Detected", box: { left: 22, top: 50, width: 26, height: 26 } },
 ];
 
 function TimelineTab() {
