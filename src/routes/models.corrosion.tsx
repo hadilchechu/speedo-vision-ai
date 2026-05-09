@@ -125,6 +125,8 @@ const initialDetections: Detection[] = [
 function TimelineTab() {
   const [detections, setDetections] = useState(initialDetections);
   const [selected, setSelected] = useState<Detection | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const confirmed = detections.filter((d) => d.status === "confirmed").length;
   const dismissed = detections.filter((d) => d.status === "dismissed").length;
@@ -132,6 +134,10 @@ function TimelineTab() {
 
   const updateStatus = (id: number, status: Detection["status"]) => {
     setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, status } : d)));
+  };
+
+  const updateLabel = (id: number, label: string) => {
+    setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, label } : d)));
   };
 
   return (
@@ -160,8 +166,16 @@ function TimelineTab() {
               </div>
             )}
           </div>
-          <div className="mt-4 px-1">
-            <div className="relative h-2 bg-gray-200 rounded-full">
+          <div className="mt-4 px-1 flex items-center gap-3">
+            <button
+              onClick={() => setPlaying((p) => !p)}
+              className="w-8 h-8 rounded-full bg-[#2E86AB] text-white flex items-center justify-center hover:bg-[#246d8c] shrink-0"
+              aria-label={playing ? "Pause" : "Play"}
+            >
+              {playing ? <Pause className="w-4 h-4" fill="currentColor" /> : <Play className="w-4 h-4 ml-0.5" fill="currentColor" />}
+            </button>
+            <span className="text-xs text-gray-600 font-mono shrink-0">00:00 / 03:00</span>
+            <div className="relative h-2 bg-gray-200 rounded-full flex-1">
               <div className="absolute left-0 top-0 h-full w-1/4 bg-[#2E86AB] rounded-full" />
               {detections.map((d) => (
                 <div
@@ -177,10 +191,12 @@ function TimelineTab() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
-              <span>00:00</span>
-              <span>03:00</span>
-            </div>
+            <button className="text-gray-500 hover:text-[#2E86AB] shrink-0" aria-label="Volume">
+              <Volume2 className="w-4 h-4" />
+            </button>
+            <button className="text-gray-500 hover:text-[#2E86AB] shrink-0" aria-label="Fullscreen">
+              <Maximize className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
