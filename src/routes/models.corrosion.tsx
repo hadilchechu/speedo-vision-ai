@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Target, Film, AlertTriangle, Play, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Target, Film, AlertTriangle, Play, Pause, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize, Upload } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 
@@ -12,13 +12,6 @@ function CorrosionDetailPage() {
   const [active, setActive] = useState("Details");
   return (
     <AppShell>
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-[#2E86AB] hover:underline mb-3"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Models
-      </Link>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">
         Corrosion Detection — Video
       </h1>
@@ -38,12 +31,21 @@ function CorrosionDetailPage() {
             </button>
           ))}
         </div>
-        <button
-          className="px-5 py-2.5 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
-          style={{ borderRadius: 0 }}
-        >
-          Run Inspection
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-5 py-2.5 bg-white border border-[#2E9E8F] text-[#2E9E8F] text-xs font-semibold uppercase tracking-wide hover:bg-[#EEF2FF] transition-colors inline-flex items-center gap-2"
+            style={{ borderRadius: 0 }}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload Video
+          </button>
+          <button
+            className="px-5 py-2.5 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
+            style={{ borderRadius: 0 }}
+          >
+            Run Inspection
+          </button>
+        </div>
       </div>
       {active === "Details" && <DetailsTab />}
       {active === "Timeline" && <TimelineTab />}
@@ -93,7 +95,7 @@ function DetailsTab() {
         <div className="divide-y divide-[#F0F2F7]">
           <MetaRow label="Model Id" value="10019" />
           <MetaRow label="Project Name" value="Project_corrosion_video" />
-          <MetaRow label="Type" value="Segmentation" />
+          <MetaRow label="Type" value="Object Detection" />
           <MetaRow label="Algorithm" value="MaskRCNN0" />
           <MetaRow label="Created" value="08 May 2025" />
         </div>
@@ -109,20 +111,23 @@ type Detection = {
   confidence: number;
   area: number;
   status: "confirmed" | "dismissed" | "pending";
+  label: string;
   box: { left: number; top: number; width: number; height: number };
 };
 
 const initialDetections: Detection[] = [
-  { id: 1, time: "00:12", position: 8, confidence: 94, area: 12.4, status: "confirmed", box: { left: 18, top: 22, width: 28, height: 30 } },
-  { id: 2, time: "00:42", position: 24, confidence: 88, area: 8.1, status: "confirmed", box: { left: 50, top: 35, width: 22, height: 24 } },
-  { id: 3, time: "01:15", position: 42, confidence: 91, area: 15.7, status: "dismissed", box: { left: 30, top: 40, width: 35, height: 28 } },
-  { id: 4, time: "01:58", position: 65, confidence: 76, area: 5.3, status: "pending", box: { left: 60, top: 18, width: 18, height: 22 } },
-  { id: 5, time: "02:34", position: 86, confidence: 82, area: 9.6, status: "pending", box: { left: 22, top: 50, width: 26, height: 26 } },
+  { id: 1, time: "00:12", position: 8, confidence: 94, area: 12.4, status: "confirmed", label: "Corrosion Detected", box: { left: 18, top: 22, width: 28, height: 30 } },
+  { id: 2, time: "00:42", position: 24, confidence: 88, area: 8.1, status: "confirmed", label: "Corrosion Detected", box: { left: 50, top: 35, width: 22, height: 24 } },
+  { id: 3, time: "01:15", position: 42, confidence: 91, area: 15.7, status: "dismissed", label: "Corrosion Detected", box: { left: 30, top: 40, width: 35, height: 28 } },
+  { id: 4, time: "01:58", position: 65, confidence: 76, area: 5.3, status: "pending", label: "Corrosion Detected", box: { left: 60, top: 18, width: 18, height: 22 } },
+  { id: 5, time: "02:34", position: 86, confidence: 82, area: 9.6, status: "pending", label: "Corrosion Detected", box: { left: 22, top: 50, width: 26, height: 26 } },
 ];
 
 function TimelineTab() {
   const [detections, setDetections] = useState(initialDetections);
   const [selected, setSelected] = useState<Detection | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const confirmed = detections.filter((d) => d.status === "confirmed").length;
   const dismissed = detections.filter((d) => d.status === "dismissed").length;
@@ -130,6 +135,10 @@ function TimelineTab() {
 
   const updateStatus = (id: number, status: Detection["status"]) => {
     setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, status } : d)));
+  };
+
+  const updateLabel = (id: number, label: string) => {
+    setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, label } : d)));
   };
 
   return (
@@ -153,13 +162,21 @@ function TimelineTab() {
                 }}
               >
                 <span className="absolute -top-6 left-0 bg-orange-500 text-white text-xs font-semibold px-2 py-0.5 rounded">
-                  Corrosion — {selected.confidence}%
+                  {selected.label} — {selected.confidence}%
                 </span>
               </div>
             )}
           </div>
-          <div className="mt-4 px-1">
-            <div className="relative h-2 bg-gray-200 rounded-full">
+          <div className="mt-4 px-1 flex items-center gap-3">
+            <button
+              onClick={() => setPlaying((p) => !p)}
+              className="w-8 h-8 rounded-full bg-[#2E86AB] text-white flex items-center justify-center hover:bg-[#246d8c] shrink-0"
+              aria-label={playing ? "Pause" : "Play"}
+            >
+              {playing ? <Pause className="w-4 h-4" fill="currentColor" /> : <Play className="w-4 h-4 ml-0.5" fill="currentColor" />}
+            </button>
+            <span className="text-xs text-gray-600 font-mono shrink-0">00:00 / 03:00</span>
+            <div className="relative h-2 bg-gray-200 rounded-full flex-1">
               <div className="absolute left-0 top-0 h-full w-1/4 bg-[#2E86AB] rounded-full" />
               {detections.map((d) => (
                 <div
@@ -175,10 +192,12 @@ function TimelineTab() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
-              <span>00:00</span>
-              <span>03:00</span>
-            </div>
+            <button className="text-gray-500 hover:text-[#2E86AB] shrink-0" aria-label="Volume">
+              <Volume2 className="w-4 h-4" />
+            </button>
+            <button className="text-gray-500 hover:text-[#2E86AB] shrink-0" aria-label="Fullscreen">
+              <Maximize className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -200,9 +219,36 @@ function TimelineTab() {
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold text-gray-900">{d.time}</span>
-                  <span className="text-xs text-gray-500 capitalize">{d.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 capitalize">{d.status}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingId(editingId === d.id ? null : d.id); }}
+                      className="text-gray-400 hover:text-[#2E86AB]"
+                      aria-label="Edit label"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-700 mb-2">Corrosion Detected</div>
+                {editingId === d.id ? (
+                  <div className="mb-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      defaultValue={d.label}
+                      onChange={(e) => updateLabel(d.id, e.target.value)}
+                      className="flex-1 h-7 px-2 text-sm border border-[#E5E7EB] rounded focus:outline-none focus:border-[#2E86AB]"
+                    />
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="px-3 h-7 bg-[#2E9E8F] text-white text-xs font-semibold uppercase hover:bg-[#268579]"
+                      style={{ borderRadius: 0 }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-700 mb-2">{d.label}</div>
+                )}
                 <div className="flex gap-4 text-xs mb-3">
                   <span className="text-[#2E86AB] font-semibold">{d.confidence}%</span>
                   <span className="text-[#2E86AB] font-semibold">Area {d.area}%</span>
@@ -313,18 +359,12 @@ function PredictionsTab() {
               <div><span className="text-gray-500">Area %: </span><span className="font-semibold text-[#2E86AB]">{r.area}</span></div>
             </div>
             <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
-              </div>
-              <span className="absolute bottom-2 left-2 text-[10px] text-white/70 uppercase tracking-wide">Original</span>
+              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Original</span>
             </div>
             <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
-              </div>
               <div className="absolute" style={{ left: "25%", top: "30%", width: "40%", height: "35%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
               <div className="absolute" style={{ left: "55%", top: "55%", width: "20%", height: "20%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
-              <span className="absolute bottom-2 left-2 text-[10px] text-white/90 uppercase tracking-wide">Annotated</span>
+              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Annotated</span>
             </div>
           </div>
         ))}
