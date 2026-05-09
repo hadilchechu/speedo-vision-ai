@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Target, Film, AlertTriangle, Play, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Target, Film, AlertTriangle, Play, Pause, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize, Upload } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 
@@ -12,13 +12,6 @@ function CorrosionDetailPage() {
   const [active, setActive] = useState("Details");
   return (
     <AppShell>
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-[#2E86AB] hover:underline mb-3"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Models
-      </Link>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">
         Corrosion Detection — Video
       </h1>
@@ -38,12 +31,21 @@ function CorrosionDetailPage() {
             </button>
           ))}
         </div>
-        <button
-          className="px-5 py-2.5 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
-          style={{ borderRadius: 0 }}
-        >
-          Run Inspection
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-5 py-2.5 bg-white border border-[#2E9E8F] text-[#2E9E8F] text-xs font-semibold uppercase tracking-wide hover:bg-[#EEF2FF] transition-colors inline-flex items-center gap-2"
+            style={{ borderRadius: 0 }}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload Video
+          </button>
+          <button
+            className="px-5 py-2.5 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
+            style={{ borderRadius: 0 }}
+          >
+            Run Inspection
+          </button>
+        </div>
       </div>
       {active === "Details" && <DetailsTab />}
       {active === "Timeline" && <TimelineTab />}
