@@ -359,18 +359,12 @@ function PredictionsTab() {
               <div><span className="text-gray-500">Area %: </span><span className="font-semibold text-[#2E86AB]">{r.area}</span></div>
             </div>
             <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
-              </div>
-              <span className="absolute bottom-2 left-2 text-[10px] text-white/70 uppercase tracking-wide">Original</span>
+              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Original</span>
             </div>
             <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Play className="w-8 h-8 text-white/80" fill="currentColor" />
-              </div>
               <div className="absolute" style={{ left: "25%", top: "30%", width: "40%", height: "35%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
               <div className="absolute" style={{ left: "55%", top: "55%", width: "20%", height: "20%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
-              <span className="absolute bottom-2 left-2 text-[10px] text-white/90 uppercase tracking-wide">Annotated</span>
+              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Annotated</span>
             </div>
           </div>
         ))}
