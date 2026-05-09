@@ -49,17 +49,22 @@ function Sidebar() {
 function TopBar() {
   const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const showBack = path !== "/" && path.startsWith("/models");
+  let back: { to: string; label: string } | null = null;
+  if (path.startsWith("/models/corrosion/")) {
+    back = { to: "/models/corrosion", label: "Corrosion Detection — Video" };
+  } else if (path === "/models/corrosion") {
+    back = { to: "/", label: "Models" };
+  }
   return (
     <div className="flex items-center justify-between h-16 px-8 bg-white border-b border-[#E5E7EB]">
       <div>
-        {showBack && (
+        {back && (
           <Link
-            to="/"
+            to={back.to}
             className="inline-flex items-center gap-1.5 text-sm text-[#2E86AB] hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
-            Models
+            {back.label}
           </Link>
         )}
       </div>
