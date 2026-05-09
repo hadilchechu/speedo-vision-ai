@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Model = {
-  to: string;
+  to: string | null;
   type: string;
   icon: typeof Boxes;
   title: string;
@@ -25,7 +25,7 @@ const models: Model[] = [
     date: "02 Dec 2021",
   },
   {
-    to: "/models/corrosion",
+    to: null,
     type: "Segmentation",
     icon: Boxes,
     title: "Car Scratch",
@@ -45,11 +45,8 @@ function FilterSelect({ label }: { label: string }) {
 
 function ModelCard({ model }: { model: Model }) {
   const Icon = model.icon;
-  return (
-    <Link
-      to={model.to}
-      className="block bg-white border border-[#E5E7EB] rounded-lg p-5 hover:border-[#2E86AB] hover:shadow-sm transition"
-    >
+  const inner = (
+    <>
       <div className="flex items-center gap-2 mb-4">
         <div className="w-7 h-7 rounded-md bg-[#EEF2FF] flex items-center justify-center">
           <Icon className="w-4 h-4 text-[#2E86AB]" />
@@ -63,6 +60,21 @@ function ModelCard({ model }: { model: Model }) {
         <span>{model.project}</span>
         <span>{model.date}</span>
       </div>
+    </>
+  );
+  if (!model.to) {
+    return (
+      <div className="block bg-white border border-[#E5E7EB] rounded-lg p-5 opacity-70 cursor-not-allowed">
+        {inner}
+      </div>
+    );
+  }
+  return (
+    <Link
+      to={model.to}
+      className="block bg-white border border-[#E5E7EB] rounded-lg p-5 hover:border-[#2E86AB] hover:shadow-sm transition"
+    >
+      {inner}
     </Link>
   );
 }
