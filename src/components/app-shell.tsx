@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown, MessageCircle } from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, ChevronDown, MessageCircle, ArrowLeft } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import logoUrl from "@/assets/logo.png";
 
@@ -48,8 +48,21 @@ function Sidebar() {
 
 function TopBar() {
   const [open, setOpen] = useState(false);
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const showBack = path !== "/" && path.startsWith("/models");
   return (
-    <div className="flex items-center justify-end h-16 px-8 bg-white border-b border-[#E5E7EB]">
+    <div className="flex items-center justify-between h-16 px-8 bg-white border-b border-[#E5E7EB]">
+      <div>
+        {showBack && (
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-[#2E86AB] hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Models
+          </Link>
+        )}
+      </div>
       <div className="relative">
         <button
           onClick={() => setOpen(!open)}
