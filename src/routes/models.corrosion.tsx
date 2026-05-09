@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Target, Film, AlertTriangle, Search, FolderVideo, ChevronRight, X, UploadCloud, CheckCircle2 } from "lucide-react";
+import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 
@@ -60,7 +60,7 @@ function CorrosionModelPage() {
           className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
         >
           <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
-            <FolderVideo className="w-5 h-5 text-[#2E86AB]" />
+            <Folder className="w-5 h-5 text-[#2E86AB]" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-gray-900">Pipeline_Inspection_01</div>
