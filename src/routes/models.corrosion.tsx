@@ -162,7 +162,7 @@ function TimelineTab() {
                 }}
               >
                 <span className="absolute -top-6 left-0 bg-orange-500 text-white text-xs font-semibold px-2 py-0.5 rounded">
-                  Corrosion — {selected.confidence}%
+                  {selected.label} — {selected.confidence}%
                 </span>
               </div>
             )}
@@ -219,9 +219,36 @@ function TimelineTab() {
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold text-gray-900">{d.time}</span>
-                  <span className="text-xs text-gray-500 capitalize">{d.status}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 capitalize">{d.status}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingId(editingId === d.id ? null : d.id); }}
+                      className="text-gray-400 hover:text-[#2E86AB]"
+                      aria-label="Edit label"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-700 mb-2">Corrosion Detected</div>
+                {editingId === d.id ? (
+                  <div className="mb-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      defaultValue={d.label}
+                      onChange={(e) => updateLabel(d.id, e.target.value)}
+                      className="flex-1 h-7 px-2 text-sm border border-[#E5E7EB] rounded focus:outline-none focus:border-[#2E86AB]"
+                    />
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="px-3 h-7 bg-[#2E9E8F] text-white text-xs font-semibold uppercase hover:bg-[#268579]"
+                      style={{ borderRadius: 0 }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-700 mb-2">{d.label}</div>
+                )}
                 <div className="flex gap-4 text-xs mb-3">
                   <span className="text-[#2E86AB] font-semibold">{d.confidence}%</span>
                   <span className="text-[#2E86AB] font-semibold">Area {d.area}%</span>
