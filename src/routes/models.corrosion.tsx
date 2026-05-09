@@ -95,7 +95,7 @@ function DetailsTab() {
         <div className="divide-y divide-[#F0F2F7]">
           <MetaRow label="Model Id" value="10019" />
           <MetaRow label="Project Name" value="Project_corrosion_video" />
-          <MetaRow label="Type" value="Segmentation" />
+          <MetaRow label="Type" value="Object Detection" />
           <MetaRow label="Algorithm" value="MaskRCNN0" />
           <MetaRow label="Created" value="08 May 2025" />
         </div>
