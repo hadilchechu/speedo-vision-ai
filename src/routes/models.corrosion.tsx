@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { useProjects, projectsStore, formatCreatedAt, type Detection } from "@/lib/projects-store";
+import { extractFrames, detectFrame, normalizeDetections } from "@/lib/corrosion-detect";
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -9,6 +11,7 @@ export const Route = createFileRoute("/models/corrosion")({
 
 function CorrosionModelPage() {
   const [openNew, setOpenNew] = useState(false);
+  const projects = useProjects();
   return (
     <AppShell>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Corrosion Detection — Video</h1>
@@ -37,6 +40,25 @@ function CorrosionModelPage() {
           </div>
 
           <div className="space-y-3">
+            {projects.map((p) => (
+              <Link
+                key={p.id}
+                to="/models/corrosion/$projectId"
+                params={{ projectId: p.id }}
+                className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
+              >
+                <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
+                  <Folder className="w-5 h-5 text-[#2E86AB]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-gray-900 truncate">{p.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.createdAt}</div>
+                </div>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded">{p.detections.length} detections</span>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded">{p.status}</span>
+                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+              </Link>
+            ))}
             <Link
               to="/models/corrosion/pipeline-inspection-01"
               className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
