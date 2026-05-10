@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelsCorrosionRouteImport } from './routes/models.corrosion'
 import { Route as ModelsCorrosionPipelineInspection01RouteImport } from './routes/models.corrosion_.pipeline-inspection-01'
+import { Route as ModelsCorrosionProjectIdRouteImport } from './routes/models.corrosion_.$projectId'
 import { Route as ModelsCorrosionNewRouteImport } from './routes/models.corrosion.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -30,6 +31,12 @@ const ModelsCorrosionPipelineInspection01Route =
     path: '/models/corrosion/pipeline-inspection-01',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ModelsCorrosionProjectIdRoute =
+  ModelsCorrosionProjectIdRouteImport.update({
+    id: '/models/corrosion_/$projectId',
+    path: '/models/corrosion/$projectId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ModelsCorrosionNewRoute = ModelsCorrosionNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -40,12 +47,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
+  '/models/corrosion/$projectId': typeof ModelsCorrosionProjectIdRoute
   '/models/corrosion/pipeline-inspection-01': typeof ModelsCorrosionPipelineInspection01Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
+  '/models/corrosion/$projectId': typeof ModelsCorrosionProjectIdRoute
   '/models/corrosion/pipeline-inspection-01': typeof ModelsCorrosionPipelineInspection01Route
 }
 export interface FileRoutesById {
@@ -53,6 +62,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
+  '/models/corrosion_/$projectId': typeof ModelsCorrosionProjectIdRoute
   '/models/corrosion_/pipeline-inspection-01': typeof ModelsCorrosionPipelineInspection01Route
 }
 export interface FileRouteTypes {
@@ -61,24 +71,28 @@ export interface FileRouteTypes {
     | '/'
     | '/models/corrosion'
     | '/models/corrosion/new'
+    | '/models/corrosion/$projectId'
     | '/models/corrosion/pipeline-inspection-01'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/models/corrosion'
     | '/models/corrosion/new'
+    | '/models/corrosion/$projectId'
     | '/models/corrosion/pipeline-inspection-01'
   id:
     | '__root__'
     | '/'
     | '/models/corrosion'
     | '/models/corrosion/new'
+    | '/models/corrosion_/$projectId'
     | '/models/corrosion_/pipeline-inspection-01'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModelsCorrosionRoute: typeof ModelsCorrosionRouteWithChildren
+  ModelsCorrosionProjectIdRoute: typeof ModelsCorrosionProjectIdRoute
   ModelsCorrosionPipelineInspection01Route: typeof ModelsCorrosionPipelineInspection01Route
 }
 
@@ -103,6 +117,13 @@ declare module '@tanstack/react-router' {
       path: '/models/corrosion/pipeline-inspection-01'
       fullPath: '/models/corrosion/pipeline-inspection-01'
       preLoaderRoute: typeof ModelsCorrosionPipelineInspection01RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/models/corrosion_/$projectId': {
+      id: '/models/corrosion_/$projectId'
+      path: '/models/corrosion/$projectId'
+      fullPath: '/models/corrosion/$projectId'
+      preLoaderRoute: typeof ModelsCorrosionProjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/models/corrosion/new': {
@@ -130,6 +151,7 @@ const ModelsCorrosionRouteWithChildren = ModelsCorrosionRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModelsCorrosionRoute: ModelsCorrosionRouteWithChildren,
+  ModelsCorrosionProjectIdRoute: ModelsCorrosionProjectIdRoute,
   ModelsCorrosionPipelineInspection01Route:
     ModelsCorrosionPipelineInspection01Route,
 }

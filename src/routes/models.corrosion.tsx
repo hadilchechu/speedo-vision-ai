@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { useProjects, projectsStore, formatCreatedAt, type Detection } from "@/lib/projects-store";
+import { extractFrames, detectFrame, normalizeDetections } from "@/lib/corrosion-detect";
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -9,6 +11,7 @@ export const Route = createFileRoute("/models/corrosion")({
 
 function CorrosionModelPage() {
   const [openNew, setOpenNew] = useState(false);
+  const projects = useProjects();
   return (
     <AppShell>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Corrosion Detection — Video</h1>
@@ -37,6 +40,25 @@ function CorrosionModelPage() {
           </div>
 
           <div className="space-y-3">
+            {projects.map((p) => (
+              <Link
+                key={p.id}
+                to="/models/corrosion/$projectId"
+                params={{ projectId: p.id }}
+                className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
+              >
+                <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
+                  <Folder className="w-5 h-5 text-[#2E86AB]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-gray-900 truncate">{p.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.createdAt}</div>
+                </div>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded">{p.detections.length} detections</span>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded">{p.status}</span>
+                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+              </Link>
+            ))}
             <Link
               to="/models/corrosion/pipeline-inspection-01"
               className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
@@ -105,17 +127,84 @@ function CorrosionModelPage() {
 }
 
 function NewProjectModal({ onClose }: { onClose: () => void }) {
-  const [file, setFile] = useState<{ name: string; size: number } | null>(null);
-  const [progress, setProgress] = useState(0);
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
+  const [phase, setPhase] = useState<"idle" | "extracting" | "analysing" | "building">("idle");
+  const [analyseStatus, setAnalyseStatus] = useState({ done: 0, total: 0 });
+  const [error, setError] = useState<string | null>(null);
 
-  const handlePick = () => {
-    setFile({ name: "pipeline_walk_02.mp4", size: 124_500_000 });
-    setProgress(30);
-    setTimeout(() => setProgress(100), 1200);
+  const processing = phase !== "idle";
+
+  const onFileChange = (f: File | null) => {
+    if (!f) return;
+    setFile(f);
+    setUploadProgress(0);
+    // Simulate quick upload progress for UI
+    const start = Date.now();
+    const id = setInterval(() => {
+      const pct = Math.min(100, Math.round(((Date.now() - start) / 800) * 100));
+      setUploadProgress(pct);
+      if (pct >= 100) clearInterval(id);
+    }, 60);
   };
 
   const sizeMb = file ? (file.size / 1_000_000).toFixed(1) + " MB" : "";
-  const ready = !!file && progress === 100;
+  const ready = !!file && uploadProgress === 100 && !processing;
+
+  const startInspection = async () => {
+    if (!file) return;
+    setError(null);
+    try {
+      setPhase("extracting");
+      const { frames, duration, videoURL } = await extractFrames(file, 2);
+      setPhase("analysing");
+      setAnalyseStatus({ done: 0, total: frames.length });
+      const detections: Detection[] = [];
+      for (let i = 0; i < frames.length; i++) {
+        const fr = frames[i];
+        try {
+          const json = await detectFrame(fr.blob);
+          const norm = normalizeDetections(json, fr.timestamp);
+          if (norm.length > 0) detections.push(...norm);
+        } catch {
+          // skip silently
+        }
+        setAnalyseStatus({ done: i + 1, total: frames.length });
+      }
+      setPhase("building");
+      const id = String(Date.now());
+      const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
+      projectsStore.add({
+        id,
+        name: projName,
+        videoURL,
+        createdAt: formatCreatedAt(),
+        detections,
+        status: "Completed",
+        duration,
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      onClose();
+      navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
+    } catch (e: any) {
+      setError(e?.message || "Processing failed");
+      setPhase("idle");
+    }
+  };
+
+  const totalProgress =
+    phase === "extracting" ? 10 :
+    phase === "analysing" ? 10 + (analyseStatus.total ? (analyseStatus.done / analyseStatus.total) * 80 : 0) :
+    phase === "building" ? 95 : 0;
+
+  const phaseLabel =
+    phase === "extracting" ? "Extracting frames..." :
+    phase === "analysing" ? `Analysing frame ${analyseStatus.done} of ${analyseStatus.total}...` :
+    phase === "building" ? "Building results..." : "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -124,7 +213,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose}
+          onClick={processing ? undefined : onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
           aria-label="Close"
         >
@@ -139,9 +228,17 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="text-base font-semibold text-gray-900 mb-1">Upload your video file</div>
             <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 2GB</div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime,video/x-msvideo,video/*"
+              className="hidden"
+              onChange={(e) => onFileChange(e.target.files?.[0] || null)}
+            />
             <button
-              onClick={handlePick}
-              className="px-5 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579]"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={processing}
+              className="px-5 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] disabled:opacity-50"
               style={{ borderRadius: 0 }}
             >
               Browse Files
@@ -155,15 +252,15 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#2E9E8F] transition-all duration-1000"
-                    style={{ width: `${progress}%` }}
+                    className="h-full bg-[#2E9E8F] transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-600">
-                  {progress === 100 ? (
+                  {uploadProgress === 100 ? (
                     <><CheckCircle2 className="w-3.5 h-3.5 text-[#2E9E8F]" /> Uploaded · 100%</>
                   ) : (
-                    <>Uploading... {progress}%</>
+                    <>Uploading... {uploadProgress}%</>
                   )}
                 </div>
               </div>
@@ -175,6 +272,9 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
               <label className="block text-xs font-semibold text-gray-700 mb-1">Project Name</label>
               <input
                 type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                disabled={processing}
                 placeholder="e.g. Pipeline_Inspection_02"
                 className="w-full h-10 px-3 text-sm border border-[#E5E7EB] rounded-md focus:outline-none focus:border-[#2E86AB]"
               />
@@ -183,33 +283,46 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
               <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
               <input
                 type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={processing}
                 placeholder="Optional notes about this inspection"
                 className="w-full h-10 px-3 text-sm border border-[#E5E7EB] rounded-md focus:outline-none focus:border-[#2E86AB]"
               />
             </div>
           </div>
 
+          {processing && (
+            <div className="mt-6">
+              <div className="text-xs text-gray-700 mb-2">{phaseLabel}</div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-[#2E9E8F] transition-all duration-300" style={{ width: `${totalProgress}%` }} />
+              </div>
+            </div>
+          )}
+          {error && <div className="mt-4 text-xs text-red-600">{error}</div>}
+
           <div className="flex items-center justify-end gap-2 mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase tracking-wide hover:bg-gray-50"
+              disabled={processing}
+              className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase tracking-wide hover:bg-gray-50 disabled:opacity-50"
               style={{ borderRadius: 0 }}
             >
               Cancel
             </button>
-            <Link
-              to="/models/corrosion/pipeline-inspection-01"
-              aria-disabled={!ready}
-              onClick={(e) => { if (!ready) e.preventDefault(); }}
+            <button
+              onClick={startInspection}
+              disabled={!ready}
               className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
                 ready
                   ? "bg-[#2E9E8F] text-white hover:bg-[#268579]"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed pointer-events-none"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
               style={{ borderRadius: 0 }}
             >
-              Start Inspection
-            </Link>
+              {processing ? "Processing..." : "Start Inspection"}
+            </button>
           </div>
         </div>
       </div>
