@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelsCorrosionRouteImport } from './routes/models.corrosion'
-import { Route as ModelsCorrosionPipelineInspection01RouteImport } from './routes/models.corrosion.pipeline-inspection-01'
+import { Route as ModelsCorrosionPipelineInspection01RouteImport } from './routes/models.corrosion_.pipeline-inspection-01'
 import { Route as ModelsCorrosionNewRouteImport } from './routes/models.corrosion.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -26,9 +26,9 @@ const ModelsCorrosionRoute = ModelsCorrosionRouteImport.update({
 } as any)
 const ModelsCorrosionPipelineInspection01Route =
   ModelsCorrosionPipelineInspection01RouteImport.update({
-    id: '/pipeline-inspection-01',
-    path: '/pipeline-inspection-01',
-    getParentRoute: () => ModelsCorrosionRoute,
+    id: '/models/corrosion_/pipeline-inspection-01',
+    path: '/models/corrosion/pipeline-inspection-01',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ModelsCorrosionNewRoute = ModelsCorrosionNewRouteImport.update({
   id: '/new',
@@ -53,7 +53,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
-  '/models/corrosion/pipeline-inspection-01': typeof ModelsCorrosionPipelineInspection01Route
+  '/models/corrosion_/pipeline-inspection-01': typeof ModelsCorrosionPipelineInspection01Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -73,12 +73,13 @@ export interface FileRouteTypes {
     | '/'
     | '/models/corrosion'
     | '/models/corrosion/new'
-    | '/models/corrosion/pipeline-inspection-01'
+    | '/models/corrosion_/pipeline-inspection-01'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ModelsCorrosionRoute: typeof ModelsCorrosionRouteWithChildren
+  ModelsCorrosionPipelineInspection01Route: typeof ModelsCorrosionPipelineInspection01Route
 }
 
 declare module '@tanstack/react-router' {
@@ -97,12 +98,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModelsCorrosionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/models/corrosion/pipeline-inspection-01': {
-      id: '/models/corrosion/pipeline-inspection-01'
-      path: '/pipeline-inspection-01'
+    '/models/corrosion_/pipeline-inspection-01': {
+      id: '/models/corrosion_/pipeline-inspection-01'
+      path: '/models/corrosion/pipeline-inspection-01'
       fullPath: '/models/corrosion/pipeline-inspection-01'
       preLoaderRoute: typeof ModelsCorrosionPipelineInspection01RouteImport
-      parentRoute: typeof ModelsCorrosionRoute
+      parentRoute: typeof rootRouteImport
     }
     '/models/corrosion/new': {
       id: '/models/corrosion/new'
@@ -116,13 +117,10 @@ declare module '@tanstack/react-router' {
 
 interface ModelsCorrosionRouteChildren {
   ModelsCorrosionNewRoute: typeof ModelsCorrosionNewRoute
-  ModelsCorrosionPipelineInspection01Route: typeof ModelsCorrosionPipelineInspection01Route
 }
 
 const ModelsCorrosionRouteChildren: ModelsCorrosionRouteChildren = {
   ModelsCorrosionNewRoute: ModelsCorrosionNewRoute,
-  ModelsCorrosionPipelineInspection01Route:
-    ModelsCorrosionPipelineInspection01Route,
 }
 
 const ModelsCorrosionRouteWithChildren = ModelsCorrosionRoute._addFileChildren(
@@ -132,6 +130,8 @@ const ModelsCorrosionRouteWithChildren = ModelsCorrosionRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ModelsCorrosionRoute: ModelsCorrosionRouteWithChildren,
+  ModelsCorrosionPipelineInspection01Route:
+    ModelsCorrosionPipelineInspection01Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

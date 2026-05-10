@@ -3,7 +3,7 @@ import { Target, Film, AlertTriangle, Play, Pause, Sparkles, Search, LayoutGrid,
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 
-export const Route = createFileRoute("/models/corrosion/pipeline-inspection-01")({
+export const Route = createFileRoute("/models/corrosion_/pipeline-inspection-01")({
   component: ProjectDetailPage,
 });
 
