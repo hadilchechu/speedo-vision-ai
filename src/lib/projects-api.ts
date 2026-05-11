@@ -1,7 +1,5 @@
 import type { Detection, Project } from "@/lib/projects-store";
 
-type ListResponse = { projects: CloudProjectSummary[] };
-
 export type CloudProjectSummary = {
   id: string;
   name: string;
@@ -13,16 +11,32 @@ export type CloudProjectSummary = {
   detection_count: number;
 };
 
-export async function fetchCloudProjectSummaries(): Promise<CloudProjectSummary[]> {
+type ListResponse = {
+  projects: CloudProjectSummary[];
+  d1SetupRequired?: boolean;
+  setupMessage?: string;
+};
+
+/** Result of listing cloud projects (includes optional D1 migration hint). */
+export type CloudProjectsListResult = {
+  projects: CloudProjectSummary[];
+  d1SetupRequired?: boolean;
+  setupMessage?: string;
+};
+
+export async function fetchCloudProjectSummaries(): Promise<CloudProjectsListResult> {
   const res = await fetch("/api/projects");
+  const data = (await res.json().catch(() => ({}))) as ListResponse & { error?: string };
   if (!res.ok) {
-    if (res.status === 503) return [];
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    const hint = body?.error ? `: ${body.error}` : "";
+    if (res.status === 503) return { projects: [] };
+    const hint = data?.error ? `: ${data.error}` : "";
     throw new Error(`List projects failed: ${res.status}${hint}`);
   }
-  const data = (await res.json()) as ListResponse;
-  return data.projects ?? [];
+  return {
+    projects: data.projects ?? [],
+    d1SetupRequired: data.d1SetupRequired,
+    setupMessage: data.setupMessage,
+  };
 }
 
 export async function fetchCloudProject(id: string): Promise<Project> {

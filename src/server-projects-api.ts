@@ -69,6 +69,11 @@ function parseExportPayload(text: string): ExportPayload {
   return data;
 }
 
+function isD1MissingSchemaError(e: unknown): boolean {
+  const s = e instanceof Error ? e.message : String(e);
+  return s.includes("no such table:") && (s.includes("projects") || s.includes("detections"));
+}
+
 export async function handleProjectsApi(request: Request, env: unknown): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -133,14 +138,26 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
     // --- /api/projects (list / create) ---
     if (segments.length === 2 && segments[0] === "api" && segments[1] === "projects") {
       if (request.method === "GET") {
-        const { results } = await db
-          .prepare(
-            `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed,
+        try {
+          const { results } = await db
+            .prepare(
+              `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed,
               (SELECT COUNT(*) FROM detections d WHERE d.project_id = p.id) AS detection_count
              FROM projects p ORDER BY p.created_at DESC`,
-          )
-          .all<Omit<RowProject, "video_key" | "video_playback_url">>();
-        return json({ projects: results ?? [] });
+            )
+            .all<Omit<RowProject, "video_key" | "video_playback_url">>();
+          return json({ projects: results ?? [] });
+        } catch (e) {
+          if (isD1MissingSchemaError(e)) {
+            return json({
+              projects: [],
+              d1SetupRequired: true,
+              setupMessage:
+                "D1 has no projects table yet. Apply migrations once: wrangler d1 migrations apply speedo-vision-ai --remote (same database_id as wrangler.jsonc).",
+            });
+          }
+          throw e;
+        }
       }
       if (request.method === "POST") {
         const form = await request.formData();
@@ -294,6 +311,16 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
     return json({ error: "Not found" }, 404);
   } catch (e) {
+    if (isD1MissingSchemaError(e)) {
+      return json(
+        {
+          error:
+            "D1 tables are missing. Run: wrangler d1 migrations apply speedo-vision-ai --remote (use the database_id from wrangler.jsonc).",
+          code: "D1_NOT_MIGRATED",
+        },
+        503,
+      );
+    }
     const msg = e instanceof Error ? e.message : "Server error";
     return json({ error: msg }, 500);
   }

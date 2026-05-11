@@ -1,6 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2, FileDown } from "lucide-react";
+import {
+  Target,
+  Film,
+  AlertTriangle,
+  Search,
+  Folder,
+  ChevronRight,
+  X,
+  UploadCloud,
+  CheckCircle2,
+  FileDown,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
@@ -64,18 +75,33 @@ function CorrosionModelPage() {
             />
           </div>
 
-          {cloudQ.isLoading && <div className="text-sm text-gray-500 py-6">Loading cloud projects…</div>}
+          {cloudQ.data?.d1SetupRequired && cloudQ.data?.setupMessage ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-4 text-sm text-amber-950">
+              <p className="font-semibold text-amber-950">Cloud database not initialized</p>
+              <p className="mt-1 text-xs leading-relaxed">{cloudQ.data.setupMessage}</p>
+              <p className="mt-2 text-xs text-amber-900/90">
+                The bundled demo below still works without D1. After migrating, refresh this page to
+                load cloud-saved projects.
+              </p>
+            </div>
+          ) : null}
+
+          {cloudQ.isLoading && (
+            <div className="text-sm text-gray-500 py-6">Loading cloud projects…</div>
+          )}
           {cloudQ.isError && (
             <div className="text-sm text-red-600 py-4">
-              Could not load projects: {cloudQ.error instanceof Error ? cloudQ.error.message : "Unknown error"}
+              Could not load projects:{" "}
+              {cloudQ.error instanceof Error ? cloudQ.error.message : "Unknown error"}
             </div>
           )}
-          {!cloudQ.isLoading && !cloudQ.isError && cloudQ.data?.length === 0 && (
+          {!cloudQ.isLoading && !cloudQ.isError && (cloudQ.data?.projects?.length ?? 0) === 0 && (
             <div className="rounded-lg border border-dashed border-[#E5E7EB] bg-white p-6 text-sm text-gray-600 mb-4">
               <p className="font-semibold text-gray-900 mb-1">No cloud-saved projects yet</p>
               <p className="text-xs leading-relaxed mb-3">
-                Use the <strong>Featured demo</strong> below (ships with the site), or run <strong>New Project</strong> and <strong>Save to cloud</strong> once D1/R2 are configured (
-                <code className="text-[11px]">wrangler.jsonc</code>).
+                Use the <strong>Featured demo</strong> below (ships with the site), or run{" "}
+                <strong>New Project</strong> and <strong>Save to cloud</strong> once D1/R2 are
+                configured (<code className="text-[11px]">wrangler.jsonc</code>).
               </p>
             </div>
           )}
@@ -89,18 +115,26 @@ function CorrosionModelPage() {
                 <Folder className="w-5 h-5 text-[#2E86AB]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">Bundled demo</div>
-                <div className="text-sm font-bold text-gray-900 truncate">{STATIC_FEATURED_DEMO.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">
+                  Bundled demo
+                </div>
+                <div className="text-sm font-bold text-gray-900 truncate">
+                  {STATIC_FEATURED_DEMO.name}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}
+                </div>
               </div>
               <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded shrink-0">
                 {STATIC_FEATURED_DEMO.detections.length} detections
               </span>
-              <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">{STATIC_FEATURED_DEMO.status}</span>
+              <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">
+                {STATIC_FEATURED_DEMO.status}
+              </span>
               <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
             </Link>
 
-            {(cloudQ.data ?? []).map((p) => (
+            {(cloudQ.data?.projects ?? []).map((p) => (
               <Link
                 key={p.id}
                 to="/models/corrosion/$projectId"
@@ -117,7 +151,9 @@ function CorrosionModelPage() {
                 <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded shrink-0">
                   {p.detection_count} detections
                 </span>
-                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">{p.status}</span>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">
+                  {p.status}
+                </span>
                 <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
               </Link>
             ))}
@@ -135,8 +171,8 @@ function CorrosionModelPage() {
           <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
             <h2 className="text-base font-bold text-gray-900 mb-3">Model Information</h2>
             <p className="text-xs text-gray-600 leading-relaxed mb-4">
-              This pre-trained model detects and labels corrosion across video footage.
-              The AI scans each frame, flags defects, and prioritises by severity level.
+              This pre-trained model detects and labels corrosion across video footage. The AI scans
+              each frame, flags defects, and prioritises by severity level.
             </p>
             <div className="divide-y divide-[#F0F2F7]">
               <MetaRow label="Model Id" value="10019" />
@@ -148,7 +184,12 @@ function CorrosionModelPage() {
           </div>
         </div>
       </div>
-      {openNew && <NewProjectModal onClose={() => setOpenNew(false)} onCreated={() => void qc.invalidateQueries({ queryKey: ["cloud-projects"] })} />}
+      {openNew && (
+        <NewProjectModal
+          onClose={() => setOpenNew(false)}
+          onCreated={() => void qc.invalidateQueries({ queryKey: ["cloud-projects"] })}
+        />
+      )}
       {openImport && (
         <ImportProjectModal
           onClose={() => setOpenImport(false)}
@@ -188,22 +229,39 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" aria-label="Close">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+          aria-label="Close"
+        >
           <X className="w-5 h-5" />
         </button>
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Import project</h2>
         <p className="text-xs text-gray-600 mb-4">
-          Use the <strong>Export JSON</strong> file from another deployment, plus the same <strong>video</strong> file (or a re-encoded copy with identical content for the same timestamps).
+          Use the <strong>Export JSON</strong> file from another deployment, plus the same{" "}
+          <strong>video</strong> file (or a re-encoded copy with identical content for the same
+          timestamps).
         </p>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Manifest (.json)</label>
-            <input ref={manifestRef} type="file" accept="application/json,.json" className="block w-full text-sm" />
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Manifest (.json)
+            </label>
+            <input
+              ref={manifestRef}
+              type="file"
+              accept="application/json,.json"
+              className="block w-full text-sm"
+            />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">Video (.mp4)</label>
@@ -301,24 +359,35 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
       onClose();
       onCreated?.();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
-    } catch (e: any) {
-      setError(e?.message || "Processing failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Processing failed");
       setPhase("idle");
     }
   };
 
   const totalProgress =
-    phase === "extracting" ? 10 :
-    phase === "analysing" ? 10 + (analyseStatus.total ? (analyseStatus.done / analyseStatus.total) * 80 : 0) :
-    phase === "building" ? 95 : 0;
+    phase === "extracting"
+      ? 10
+      : phase === "analysing"
+        ? 10 + (analyseStatus.total ? (analyseStatus.done / analyseStatus.total) * 80 : 0)
+        : phase === "building"
+          ? 95
+          : 0;
 
   const phaseLabel =
-    phase === "extracting" ? "Extracting frames..." :
-    phase === "analysing" ? `Analysing frame ${analyseStatus.done} of ${analyseStatus.total}...` :
-    phase === "building" ? "Building results..." : "";
+    phase === "extracting"
+      ? "Extracting frames..."
+      : phase === "analysing"
+        ? `Analysing frame ${analyseStatus.done} of ${analyseStatus.total}...`
+        : phase === "building"
+          ? "Building results..."
+          : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
         onClick={(e) => e.stopPropagation()}
@@ -369,7 +438,9 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-600">
                   {uploadProgress === 100 ? (
-                    <><CheckCircle2 className="w-3.5 h-3.5 text-[#2E9E8F]" /> Uploaded · 100%</>
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#2E9E8F]" /> Uploaded · 100%
+                    </>
                   ) : (
                     <>Uploading... {uploadProgress}%</>
                   )}
@@ -407,7 +478,10 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
             <div className="mt-6">
               <div className="text-xs text-gray-700 mb-2">{phaseLabel}</div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#2E9E8F] transition-all duration-300" style={{ width: `${totalProgress}%` }} />
+                <div
+                  className="h-full bg-[#2E9E8F] transition-all duration-300"
+                  style={{ width: `${totalProgress}%` }}
+                />
               </div>
             </div>
           )}
@@ -441,7 +515,15 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Target;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="bg-white border border-[#E5E7EB] rounded-lg p-4 flex items-center gap-3">
       <div className="w-9 h-9 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
