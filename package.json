@@ -11,8 +11,6 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "cf:dev": "wrangler dev",
-    "cf:migrate:local": "wrangler d1 migrations apply speedo-vision-ai --local",
-    "cf:migrate:remote": "wrangler d1 migrations apply speedo-vision-ai --remote",
     "media:strip-demo-audio": "bash scripts/strip-demo-audio.sh"
   },
   "dependencies": {

@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Target,
   Film,
@@ -15,24 +14,61 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
-import { projectsStore, formatCreatedAt, type Detection } from "@/lib/projects-store";
+import {
+  projectsStore,
+  formatCreatedAt,
+  type Detection,
+  type Project,
+  useProjects,
+} from "@/lib/projects-store";
 import { extractFrames, detectFrame, normalizeDetections } from "@/lib/corrosion-detect";
-import { fetchCloudProjectSummaries, importProjectToCloud } from "@/lib/projects-api";
 import { STATIC_FEATURED_DEMO } from "@/lib/static-featured-demo";
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
 });
 
+/** Parses Export JSON (same shape as `downloadProjectManifest`) and adds the project to this session. */
+function importManifestIntoSession(manifestJson: string, videoFile: File): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(manifestJson);
+  } catch {
+    throw new Error("Manifest is not valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object") throw new Error("Invalid manifest.");
+  const root = parsed as Record<string, unknown>;
+  const proj = root.project as Record<string, unknown> | undefined;
+  const detections = root.detections;
+  if (!proj || typeof proj.name !== "string") {
+    throw new Error("Invalid manifest: expected project.name.");
+  }
+  if (!Array.isArray(detections)) {
+    throw new Error("Invalid manifest: expected detections array.");
+  }
+  const id = typeof proj.id === "string" && proj.id.length > 0 ? proj.id : String(Date.now());
+  if (projectsStore.get(id)) {
+    projectsStore.remove(id);
+  }
+  const videoURL = URL.createObjectURL(videoFile);
+  const project: Project = {
+    id,
+    name: proj.name,
+    videoURL,
+    createdAt: typeof proj.createdAt === "string" ? proj.createdAt : formatCreatedAt(),
+    detections: detections as Detection[],
+    status: typeof proj.status === "string" ? proj.status : "Completed",
+    duration: typeof proj.duration === "number" ? proj.duration : 0,
+    fileName: typeof proj.fileName === "string" ? proj.fileName : videoFile.name,
+    framesAnalysed: typeof proj.framesAnalysed === "number" ? proj.framesAnalysed : undefined,
+  };
+  projectsStore.add(project);
+}
+
 function CorrosionModelPage() {
   const [openNew, setOpenNew] = useState(false);
   const [openImport, setOpenImport] = useState(false);
-  const qc = useQueryClient();
-  const cloudQ = useQuery({
-    queryKey: ["cloud-projects"],
-    queryFn: fetchCloudProjectSummaries,
-    staleTime: 15_000,
-  });
+  const sessionProjects = useProjects();
 
   return (
     <AppShell>
@@ -75,37 +111,6 @@ function CorrosionModelPage() {
             />
           </div>
 
-          {cloudQ.data?.d1SetupRequired && cloudQ.data?.setupMessage ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-4 text-sm text-amber-950">
-              <p className="font-semibold text-amber-950">Cloud database not initialized</p>
-              <p className="mt-1 text-xs leading-relaxed">{cloudQ.data.setupMessage}</p>
-              <p className="mt-2 text-xs text-amber-900/90">
-                The bundled demo below still works without D1. After migrating, refresh this page to
-                load cloud-saved projects.
-              </p>
-            </div>
-          ) : null}
-
-          {cloudQ.isLoading && (
-            <div className="text-sm text-gray-500 py-6">Loading cloud projects…</div>
-          )}
-          {cloudQ.isError && (
-            <div className="text-sm text-red-600 py-4">
-              Could not load projects:{" "}
-              {cloudQ.error instanceof Error ? cloudQ.error.message : "Unknown error"}
-            </div>
-          )}
-          {!cloudQ.isLoading && !cloudQ.isError && (cloudQ.data?.projects?.length ?? 0) === 0 && (
-            <div className="rounded-lg border border-dashed border-[#E5E7EB] bg-white p-6 text-sm text-gray-600 mb-4">
-              <p className="font-semibold text-gray-900 mb-1">No cloud-saved projects yet</p>
-              <p className="text-xs leading-relaxed mb-3">
-                Use the <strong>Featured demo</strong> below (ships with the site), or run{" "}
-                <strong>New Project</strong> and <strong>Save to cloud</strong> once D1/R2 are
-                configured (<code className="text-[11px]">wrangler.jsonc</code>).
-              </p>
-            </div>
-          )}
-
           <div className="space-y-3">
             <Link
               to="/models/corrosion/pipeline-inspection-01"
@@ -134,7 +139,7 @@ function CorrosionModelPage() {
               <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
             </Link>
 
-            {(cloudQ.data?.projects ?? []).map((p) => (
+            {sessionProjects.map((p) => (
               <Link
                 key={p.id}
                 to="/models/corrosion/$projectId"
@@ -146,10 +151,10 @@ function CorrosionModelPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold text-gray-900 truncate">{p.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.created_at}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.createdAt}</div>
                 </div>
                 <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded shrink-0">
-                  {p.detection_count} detections
+                  {p.detections.length} detections
                 </span>
                 <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">
                   {p.status}
@@ -184,19 +189,11 @@ function CorrosionModelPage() {
           </div>
         </div>
       </div>
-      {openNew && (
-        <NewProjectModal
-          onClose={() => setOpenNew(false)}
-          onCreated={() => void qc.invalidateQueries({ queryKey: ["cloud-projects"] })}
-        />
-      )}
+      {openNew && <NewProjectModal onClose={() => setOpenNew(false)} />}
       {openImport && (
         <ImportProjectModal
           onClose={() => setOpenImport(false)}
-          onDone={() => {
-            void qc.invalidateQueries({ queryKey: ["cloud-projects"] });
-            setOpenImport(false);
-          }}
+          onDone={() => setOpenImport(false)}
         />
       )}
     </AppShell>
@@ -218,7 +215,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
     setBusy(true);
     try {
       const text = await mf.text();
-      await importProjectToCloud(text, vf);
+      importManifestIntoSession(text, vf);
       toast.success("Project imported.");
       onDone();
     } catch (e) {
@@ -292,7 +289,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
   );
 }
 
-function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
+function NewProjectModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -357,7 +354,6 @@ function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreate
       });
       await new Promise((r) => setTimeout(r, 400));
       onClose();
-      onCreated?.();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed");

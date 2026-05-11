@@ -7,8 +7,7 @@ AI-assisted **video inspection** for industrial corrosion detection: upload foot
 - **Corrosion Detection — Video** workflow: new project from MP4, frame extraction, remote inference API, in-browser review
 - **Timeline** with playhead-synced bounding boxes, confirm / dismiss / label edits (session state)
 - **Predictions** tab with stats and **Export** to PDF (original + annotated thumbnails)
-- **Cloudflare Workers + D1** persistence for project lists and assets (`/api/projects`), with graceful handling when migrations are not applied yet
-- Optional **R2** video storage; **playback URL** path when R2 is disabled
+- **Session-only projects** in the browser (import/export JSON + video for portability)
 
 ## Tech stack
 
@@ -16,15 +15,15 @@ AI-assisted **video inspection** for industrial corrosion detection: upload foot
 |--------|--------|
 | App | [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) (file routes) |
 | UI | React 19, Tailwind CSS 4, Radix UI, lucide-react |
-| Server | `src/server.ts` → TanStack server entry + `/api/projects` REST handlers (`src/server-projects-api.ts`) |
-| Deploy | Cloudflare Workers (`wrangler.jsonc`), D1 SQLite, optional R2 |
+| Server | `src/server.ts` → TanStack Start server entry |
+| Deploy | Cloudflare Workers (`wrangler.jsonc`) |
 | PDF | jsPDF + jspdf-autotable |
 
 ## Prerequisites
 
 - **Node.js** 22+
 - **npm** (primary); **bun** optional if you refresh `bun.lock` after dependency changes
-- **Cloudflare account** (only if you deploy or use D1/R2)
+- **Cloudflare account** (only if you deploy to Workers)
 
 ## Local development
 
@@ -39,7 +38,7 @@ Open the URL Vite prints (usually `http://localhost:5173`).
 
 ### Why the repo root looks busy
 
-Vite, ESLint, Prettier, TypeScript, and Wrangler **expect config next to `package.json`**—that is normal. Most code lives in **`src/`**; **`public/`** is static assets; **`migrations/d1/`** is the database schema.
+Vite, ESLint, Prettier, TypeScript, and Wrangler **expect config next to `package.json`**—that is normal. Most code lives in **`src/`**; **`public/`** is static assets.
 
 | Root file | Purpose |
 |-----------|---------|
@@ -47,7 +46,7 @@ Vite, ESLint, Prettier, TypeScript, and Wrangler **expect config next to `packag
 | `eslint.config.js`, `.prettierrc`, `.prettierignore` | Lint & format |
 | `components.json` | shadcn/ui paths |
 | `tsconfig.json` | TypeScript |
-| `wrangler.jsonc` | Cloudflare Workers + D1 binding |
+| `wrangler.jsonc` | Cloudflare Workers entry |
 | `vercel.json` | Optional SPA rewrites on Vercel |
 
 ### Two lockfiles (`package-lock.json` + `bun.lock`)
@@ -73,8 +72,6 @@ To use **only one** package manager in CI, update your pipeline first—then you
 | `npm run preview` | Preview production build |
 | `npm run lint` | ESLint |
 | `npm run cf:dev` | Wrangler dev (Workers) |
-| `npm run cf:migrate:local` | Apply D1 migrations locally |
-| `npm run cf:migrate:remote` | Apply D1 migrations to production DB |
 | `npm run media:strip-demo-audio` | Strip audio from `public/demo-inspection/demo.mp4` (needs FFmpeg) |
 
 ## Detection API
@@ -87,18 +84,7 @@ Point `API_URL` at your own deployment if you replace the model.
 
 ## Cloudflare setup
 
-1. **D1** — Create a database and set `database_id` in `wrangler.jsonc` (see comments in that file).
-2. **Migrations** (required for cloud project list / save):
-
-   ```bash
-   npm run cf:migrate:remote
-   ```
-
-   Until migrations run, the hub shows an **amber** setup notice instead of failing hard; the **featured demo** still works without D1.
-
-3. **R2** — Optional. If omitted, saving uses a **playback URL** (same-origin or HTTPS) for the video; see `server-projects-api.ts`.
-
-4. **Deploy** — Use your usual Workers pipeline (`wrangler deploy` or CI). Ensure `bun.lock` stays in sync if CI uses `bun install --frozen-lockfile`.
+Deploy with your usual Workers pipeline (`wrangler deploy` or CI). Ensure `bun.lock` stays in sync if CI uses `bun install --frozen-lockfile`.
 
 ## Repository layout
 
@@ -106,9 +92,8 @@ Point `API_URL` at your own deployment if you replace the model.
 src/
   routes/           # File-based routes (TanStack Router)
   components/       # App shell, corrosion UI, shadcn-style UI kit
-  lib/              # API clients, detection, PDF export, static demo data
+  lib/              # Detection, PDF export, static demo data, in-memory project store
   server.ts         # Worker fetch handler entry
-migrations/d1/      # D1 SQL migrations
 public/demo-inspection/   # Bundled demo MP4 + folder README
 scripts/            # e.g. strip-demo-audio.sh
 ```

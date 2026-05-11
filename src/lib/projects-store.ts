@@ -40,6 +40,10 @@ export const projectsStore = {
   get(id: string) {
     return projects.find((p) => p.id === id);
   },
+  remove(id: string) {
+    projects = projects.filter((p) => p.id !== id);
+    emit();
+  },
 };
 
 export function useProjects() {

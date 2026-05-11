@@ -10,8 +10,8 @@ function TeamPage() {
   return (
     <AppShell>
       <PlannedPage title="Team">
-        Shared workspaces, roles, and invitations will land here. For now, projects stay under your
-        account on this device and in cloud saves (when D1 is configured).
+        Shared workspaces, roles, and invitations will land here. For now, projects stay on this
+        device for your session.
       </PlannedPage>
     </AppShell>
   );
