@@ -1,17 +1,17 @@
 import type { Detection, Project } from "@/lib/projects-store";
+import { finalizeCorrosionDetections } from "@/lib/corrosion-detect";
 
 /**
  * Bundled featured inspection: `/models/corrosion/pipeline-inspection-01`.
  * Video: `public/demo-inspection/demo.mp4`.
  *
- * `demoDetections` is **real model output** (same shape as Export JSON): sampled every 2s via
- * `extractFrames` + `detectFrame` on `demo.mp4`. Re-export from the app and paste here if you
- * change the clip or retrain the API.
+ * Raw rows below are model output on `demo.mp4`; `finalizeCorrosionDetections` is applied when
+ * building `STATIC_FEATURED_DEMO` so the hub matches new-project behaviour (one row per region).
  */
 const DEMO_VIDEO_PATH = "/demo-inspection/demo.mp4";
 
-/** Model run on `demo.mp4` (3 frames → 5 boxes where the API returned multiple regions). */
-const demoDetections: Detection[] = [
+/** Raw model boxes before merge (same source as historical export). */
+const rawDemoDetections: Detection[] = [
   {
     timestamp: 0,
     label: "Corrosion Detected",
@@ -48,6 +48,8 @@ const demoDetections: Detection[] = [
     box: { x: 61.8, y: 83.6, width: 10.7, height: 16.2 },
   },
 ];
+
+const demoDetections = finalizeCorrosionDetections(rawDemoDetections);
 
 export const STATIC_FEATURED_DEMO_ID = "pipeline-inspection-01";
 

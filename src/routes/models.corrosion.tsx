@@ -21,7 +21,12 @@ import {
   type Project,
   useProjects,
 } from "@/lib/projects-store";
-import { extractFrames, detectFrame, normalizeDetections } from "@/lib/corrosion-detect";
+import {
+  extractFrames,
+  detectFrame,
+  normalizeDetections,
+  finalizeCorrosionDetections,
+} from "@/lib/corrosion-detect";
 import { STATIC_FEATURED_DEMO } from "@/lib/static-featured-demo";
 
 export const Route = createFileRoute("/models/corrosion")({
@@ -56,7 +61,7 @@ function importManifestIntoSession(manifestJson: string, videoFile: File): void 
     name: proj.name,
     videoURL,
     createdAt: typeof proj.createdAt === "string" ? proj.createdAt : formatCreatedAt(),
-    detections: detections as Detection[],
+    detections: finalizeCorrosionDetections(detections as Detection[]),
     status: typeof proj.status === "string" ? proj.status : "Completed",
     duration: typeof proj.duration === "number" ? proj.duration : 0,
     fileName: typeof proj.fileName === "string" ? proj.fileName : videoFile.name,
@@ -341,12 +346,13 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
       setPhase("building");
       const id = String(Date.now());
       const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
+      const finalized = finalizeCorrosionDetections(detections);
       projectsStore.add({
         id,
         name: projName,
         videoURL,
         createdAt: formatCreatedAt(),
-        detections,
+        detections: finalized,
         status: "Completed",
         duration,
         fileName: file.name,
