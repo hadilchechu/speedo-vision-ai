@@ -1,5 +1,7 @@
 # Featured inspection demo asset
 
+See the [repository README](../../README.md) for project overview and Cloudflare setup.
+
 Add your demo video here as:
 
 **`demo.mp4`**
