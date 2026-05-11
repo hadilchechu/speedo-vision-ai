@@ -9,6 +9,7 @@ import type { Detection, Project } from "@/lib/projects-store";
  */
 const DEMO_VIDEO_PATH = "/demo-inspection/demo.mp4";
 
+/** Matches bundled `public/demo-inspection/demo.mp4` (~5s). Expand when you swap in a longer clip. */
 const demoDetections: Detection[] = [
   {
     timestamp: 2,
@@ -16,34 +17,6 @@ const demoDetections: Detection[] = [
     confidence: 94,
     area_percent: 4.2,
     box: { x: 18, y: 22, width: 28, height: 30 },
-  },
-  {
-    timestamp: 8,
-    label: "Corrosion detected",
-    confidence: 88,
-    area_percent: 3.1,
-    box: { x: 52, y: 34, width: 22, height: 24 },
-  },
-  {
-    timestamp: 14,
-    label: "Corrosion detected",
-    confidence: 91,
-    area_percent: 5.6,
-    box: { x: 30, y: 42, width: 32, height: 26 },
-  },
-  {
-    timestamp: 21,
-    label: "Corrosion detected",
-    confidence: 79,
-    area_percent: 2.4,
-    box: { x: 62, y: 20, width: 18, height: 22 },
-  },
-  {
-    timestamp: 26,
-    label: "Corrosion detected",
-    confidence: 86,
-    area_percent: 3.9,
-    box: { x: 24, y: 48, width: 26, height: 28 },
   },
 ];
 
@@ -56,8 +29,8 @@ export const STATIC_FEATURED_DEMO: Project = {
   createdAt: "08 May 2025",
   detections: demoDetections,
   status: "Completed",
-  /** Placeholder until `demo.mp4` loads — Timeline updates from real metadata when possible. */
-  duration: 30,
+  /** Placeholder until `demo.mp4` loads — Timeline uses real duration from metadata when possible. */
+  duration: 5,
   fileName: "demo_inspection.mp4",
-  framesAnalysed: 15,
+  framesAnalysed: 5,
 };

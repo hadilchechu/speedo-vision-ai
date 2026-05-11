@@ -15,12 +15,17 @@ import {
   Pencil,
   Maximize,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
 import { exportCorrosionPredictionsPdf } from "@/lib/corrosion-pdf-export";
-import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
+import {
+  detectionsWithinVideoDuration,
+  formatTimestamp,
+  type Detection,
+  type Project,
+} from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
 
@@ -153,8 +158,13 @@ function firstDetectionIdByTimestamp(
   return sorted[0]?.id ?? null;
 }
 
+function detectionMergeKey(d: Pick<Detection, "timestamp" | "label" | "box">): string {
+  return `${d.timestamp}|${d.box.x}|${d.box.y}|${d.box.width}|${d.box.height}|${d.label}`;
+}
+
 function DetailsTab({ project }: { project: Project }) {
   const frames = project.framesAnalysed ?? 0;
+  const defectsInClip = detectionsWithinVideoDuration(project.detections, project.duration).length;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -164,11 +174,7 @@ function DetailsTab({ project }: { project: Project }) {
           label="Frames Analysed"
           value={frames ? `${frames} / ${frames}` : "—"}
         />
-        <StatCard
-          icon={AlertTriangle}
-          label="Defects Detected"
-          value={String(project.detections.length)}
-        />
+        <StatCard icon={AlertTriangle} label="Defects Detected" value={String(defectsInClip)} />
       </div>
       <div className="rounded-lg border border-[#E5E7EB] bg-white p-6">
         <h2 className="mb-4 text-[18px] font-bold text-gray-900">Project Information</h2>
@@ -193,14 +199,22 @@ function TimelineTab({
   defaultReviewStatus: ReviewStatus;
   onDurationKnown: (seconds: number) => void;
 }) {
+  const filteredSource = useMemo(
+    () => detectionsWithinVideoDuration(project.detections, project.duration),
+    [project.detections, project.duration],
+  );
+
   const [detections, setDetections] = useState<TimelineDetection[]>(() =>
-    project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus })),
+    detectionsWithinVideoDuration(project.detections, project.duration).map((d, i) => ({
+      ...d,
+      id: i,
+      status: defaultReviewStatus,
+    })),
   );
-  const [selectedId, setSelectedId] = useState<number | null>(() =>
-    firstDetectionIdByTimestamp(
-      project.detections.map((d, i) => ({ id: i, timestamp: d.timestamp })),
-    ),
-  );
+  const [selectedId, setSelectedId] = useState<number | null>(() => {
+    const f = detectionsWithinVideoDuration(project.detections, project.duration);
+    return firstDetectionIdByTimestamp(f.map((d, i) => ({ id: i, timestamp: d.timestamp })));
+  });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -208,6 +222,30 @@ function TimelineTab({
   const initialSeekDoneRef = useRef(false);
   const detectionsRef = useRef(detections);
   detectionsRef.current = detections;
+
+  useEffect(() => {
+    setDetections((prev) => {
+      const prevByKey = new Map(prev.map((x) => [detectionMergeKey(x), x]));
+      return filteredSource.map((d, i) => {
+        const old = prevByKey.get(detectionMergeKey(d));
+        return {
+          ...d,
+          id: i,
+          status: old?.status ?? defaultReviewStatus,
+          labelOverride: old?.labelOverride,
+        };
+      });
+    });
+  }, [filteredSource, defaultReviewStatus]);
+
+  useEffect(() => {
+    setSelectedId((sid) => {
+      if (detections.length === 0) return null;
+      if (sid !== null && detections.some((d) => d.id === sid)) return sid;
+      if (playing) return null;
+      return firstDetectionIdByTimestamp(detections);
+    });
+  }, [detections, playing]);
 
   const selected = detections.find((d) => d.id === selectedId) || null;
   const overlayDetection = playing
@@ -535,7 +573,10 @@ function PredictionStatCard({
 
 function PredictionsTab({ project }: { project: Project }) {
   const [exportingPdf, setExportingPdf] = useState(false);
-  const detections = project.detections;
+  const detections = useMemo(
+    () => detectionsWithinVideoDuration(project.detections, project.duration),
+    [project.detections, project.duration],
+  );
   const avgScore = detections.length
     ? (detections.reduce((s, d) => s + d.confidence / 100, 0) / detections.length).toFixed(2)
     : "0.00";
@@ -590,7 +631,7 @@ function PredictionsTab({ project }: { project: Project }) {
             onClick={async () => {
               setExportingPdf(true);
               try {
-                await exportCorrosionPredictionsPdf(project);
+                await exportCorrosionPredictionsPdf({ ...project, detections });
                 toast.success("PDF report downloaded.");
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "PDF export failed.");
