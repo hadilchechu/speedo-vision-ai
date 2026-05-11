@@ -9,12 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamRouteImport } from './routes/team'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ModelsCorrosionRouteImport } from './routes/models.corrosion'
 import { Route as ModelsCorrosionPipelineInspection01RouteImport } from './routes/models.corrosion_.pipeline-inspection-01'
 import { Route as ModelsCorrosionProjectIdRouteImport } from './routes/models.corrosion_.$projectId'
 import { Route as ModelsCorrosionNewRouteImport } from './routes/models.corrosion.new'
 
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -45,6 +57,8 @@ const ModelsCorrosionNewRoute = ModelsCorrosionNewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/team': typeof TeamRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
   '/models/corrosion/$projectId': typeof ModelsCorrosionProjectIdRoute
@@ -52,6 +66,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/team': typeof TeamRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
   '/models/corrosion/$projectId': typeof ModelsCorrosionProjectIdRoute
@@ -60,6 +76,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
+  '/team': typeof TeamRoute
   '/models/corrosion': typeof ModelsCorrosionRouteWithChildren
   '/models/corrosion/new': typeof ModelsCorrosionNewRoute
   '/models/corrosion_/$projectId': typeof ModelsCorrosionProjectIdRoute
@@ -69,6 +87,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/settings'
+    | '/team'
     | '/models/corrosion'
     | '/models/corrosion/new'
     | '/models/corrosion/$projectId'
@@ -76,6 +96,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/settings'
+    | '/team'
     | '/models/corrosion'
     | '/models/corrosion/new'
     | '/models/corrosion/$projectId'
@@ -83,6 +105,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/settings'
+    | '/team'
     | '/models/corrosion'
     | '/models/corrosion/new'
     | '/models/corrosion_/$projectId'
@@ -91,6 +115,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
+  TeamRoute: typeof TeamRoute
   ModelsCorrosionRoute: typeof ModelsCorrosionRouteWithChildren
   ModelsCorrosionProjectIdRoute: typeof ModelsCorrosionProjectIdRoute
   ModelsCorrosionPipelineInspection01Route: typeof ModelsCorrosionPipelineInspection01Route
@@ -98,6 +124,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -150,6 +190,8 @@ const ModelsCorrosionRouteWithChildren = ModelsCorrosionRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
+  TeamRoute: TeamRoute,
   ModelsCorrosionRoute: ModelsCorrosionRouteWithChildren,
   ModelsCorrosionProjectIdRoute: ModelsCorrosionProjectIdRoute,
   ModelsCorrosionPipelineInspection01Route:

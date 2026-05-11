@@ -1,6 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, ChevronDown, MessageCircle, ArrowLeft } from "lucide-react";
+import {
+  Boxes,
+  Users,
+  Settings as SettingsIcon,
+  ChevronDown,
+  MessageCircle,
+  ArrowLeft,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
 
 const navItems = [
@@ -22,18 +30,14 @@ function Sidebar() {
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
           const active =
-            item.to === "/"
-              ? path === "/" || path.startsWith("/models")
-              : path === item.to;
+            item.to === "/" ? path === "/" || path.startsWith("/models") : path === item.to;
           const Icon = item.icon;
           return (
             <Link
               key={item.label}
               to={item.to}
               className={`flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors rounded-md ${
-                active
-                  ? "bg-[#EEF2FF] text-[#2E86AB]"
-                  : "text-gray-600 hover:bg-gray-50"
+                active ? "bg-[#EEF2FF] text-[#2E86AB]" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Icon className={`w-4 h-4 ${active ? "text-[#2E86AB]" : "text-gray-500"}`} />
@@ -54,6 +58,8 @@ function TopBar() {
     back = { to: "/models/corrosion", label: "Corrosion Detection — Video" };
   } else if (path === "/models/corrosion") {
     back = { to: "/", label: "Models" };
+  } else if (path === "/team" || path === "/settings") {
+    back = { to: "/", label: "Models" };
   }
   return (
     <div className="flex items-center justify-between h-16 px-8 bg-white border-b border-[#E5E7EB]">
@@ -69,10 +75,7 @@ function TopBar() {
         )}
       </div>
       <div className="relative">
-        <button
-          onClick={() => setOpen(!open)}
-          className="flex items-center gap-3 text-sm"
-        >
+        <button onClick={() => setOpen(!open)} className="flex items-center gap-3 text-sm">
           <img
             src="https://i.pravatar.cc/72?img=12"
             alt="John Stephan"
@@ -85,10 +88,34 @@ function TopBar() {
           <ChevronDown className="w-4 h-4 text-gray-500" />
         </button>
         {open && (
-          <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E5E7EB] rounded-md shadow-lg py-1 z-10">
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</a>
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Account settings</a>
-            <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign out</a>
+          <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-[#E5E7EB] bg-white py-1 shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                toast.info("Profile — coming soon");
+                setOpen(false);
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Profile
+            </button>
+            <Link
+              to="/settings"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Account settings
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                toast.info("Sign out — coming soon");
+                setOpen(false);
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Sign out
+            </button>
           </div>
         )}
       </div>
@@ -99,10 +126,12 @@ function TopBar() {
 function ChatBubble() {
   return (
     <button
+      type="button"
       aria-label="Chat"
-      className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-[#2E9E8F] text-white flex items-center justify-center shadow-lg hover:bg-[#268579] transition z-20"
+      onClick={() => toast.info("Support chat — coming soon")}
+      className="fixed bottom-6 right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-[#2E9E8F] text-white shadow-lg transition hover:bg-[#268579]"
     >
-      <MessageCircle className="w-5 h-5" />
+      <MessageCircle className="h-5 w-5" />
     </button>
   );
 }
