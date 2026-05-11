@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Target, Film, AlertTriangle, Play, Pause, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize } from "lucide-react";
+import { Target, Film, AlertTriangle, Play, Pause, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { OriginalFramePanel, AnnotatedFramePanel, InspectionSummary, LegacyVideoPlaceholder } from "@/components/frame-panels";
 
 export const Route = createFileRoute("/models/corrosion_/pipeline-inspection-01")({
   component: ProjectDetailPage,
@@ -135,12 +136,8 @@ function TimelineTab() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-4">
         <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-          <div className="relative w-full bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition">
-                <Play className="w-7 h-7 text-[#1f2937] ml-1" fill="currentColor" />
-              </button>
-            </div>
+          <div className="relative">
+            <LegacyVideoPlaceholder filename="pipeline_walk_01.mp4" />
             {selected && (
               <div
                 className="absolute border-2 border-orange-500 bg-orange-500/30"
@@ -193,6 +190,11 @@ function TimelineTab() {
       </div>
 
       <div className="space-y-4">
+        <InspectionSummary>
+          Analysis complete. 5 instances of corrosion detected across 4:12 of footage.
+          Highest severity at 00:42 and 01:58. Estimated affected area: 12.4% of inspected surface.
+          Recommend immediate review of mid-section joints.
+        </InspectionSummary>
         <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
           <h3 className="text-base font-bold text-gray-900 mb-3">Frame Detections</h3>
           <div className="text-xs text-gray-500 mb-4 pb-3 border-b border-[#F0F2F7]">
@@ -260,15 +262,6 @@ function TimelineTab() {
               </div>
             ))}
           </div>
-        </div>
-        <div className="relative bg-[#EEF2FF] border-l-[3px] border-[#2E86AB] rounded-r-md p-4">
-          <Sparkles className="absolute top-3 right-3 w-4 h-4 text-[#2E86AB]" />
-          <h4 className="text-sm font-bold text-gray-900 mb-2">AI Inspection Summary</h4>
-          <p className="text-xs text-gray-700 leading-relaxed pr-6">
-            Analysis complete. 5 instances of corrosion detected across 4:12 of footage.
-            Highest severity at 00:42 and 01:58. Estimated affected area: 12.4% of inspected surface.
-            Recommend immediate review of mid-section joints.
-          </p>
         </div>
       </div>
     </div>
@@ -348,14 +341,8 @@ function PredictionsTab() {
               <div><span className="text-gray-500">Created On: </span><span className="font-semibold text-gray-900">{r.date}</span></div>
               <div><span className="text-gray-500">Area %: </span><span className="font-semibold text-[#2E86AB]">{r.area}</span></div>
             </div>
-            <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Original</span>
-            </div>
-            <div className="relative bg-[#1f2937] rounded-md overflow-hidden" style={{ aspectRatio: "16/9" }}>
-              <div className="absolute" style={{ left: "25%", top: "30%", width: "40%", height: "35%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
-              <div className="absolute" style={{ left: "55%", top: "55%", width: "20%", height: "20%", background: "rgba(34,197,94,0.45)", border: "2px solid #22c55e" }} />
-              <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded">Annotated</span>
-            </div>
+            <OriginalFramePanel timestamp={r.name} />
+            <AnnotatedFramePanel box={{ x: 25, y: 30, width: 40, height: 35 }} />
           </div>
         ))}
       </div>
