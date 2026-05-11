@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "cf:dev": "wrangler dev",
     "cf:migrate:local": "wrangler d1 migrations apply speedo-vision-ai --local",
-    "cf:migrate:remote": "wrangler d1 migrations apply speedo-vision-ai --remote"
+    "cf:migrate:remote": "wrangler d1 migrations apply speedo-vision-ai --remote",
+    "media:strip-demo-audio": "bash scripts/strip-demo-audio.sh"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
@@ -54,6 +55,8 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",

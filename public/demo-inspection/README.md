@@ -16,3 +16,19 @@ After you replace the clip, update the baked metadata in `src/lib/static-feature
 - Each entry in `demoDetections`: `timestamp` (seconds), `box` `{ x, y, width, height }` as **percentages of the video frame** (0–100), plus `confidence` / `area_percent` / `label` as you want them displayed.
 
 Optional: re-run the in-app inspection flow once against your file, copy the resulting `detections` array from the browser devtools or from a small script using `extractFrames` + `detectFrame`, and paste into `static-featured-demo.ts` so boxes align with the model.
+
+## Remove audio from `demo.mp4`
+
+This only changes the file on disk (video stream is copied, not re-encoded; audio tracks are dropped).
+
+1. Install [FFmpeg](https://ffmpeg.org/) (macOS: `brew install ffmpeg`).
+2. From the repo root: `npm run media:strip-demo-audio`
+
+Or manually:
+
+```bash
+ffmpeg -y -i public/demo-inspection/demo.mp4 -an -c:v copy public/demo-inspection/demo.tmp.mp4 \
+  && mv public/demo-inspection/demo.tmp.mp4 public/demo-inspection/demo.mp4
+```
+
+**Note:** `<video muted>` in the app only silences playback in the browser; it does not remove audio from the file. Use FFmpeg (or another editor) to strip the track from the MP4.

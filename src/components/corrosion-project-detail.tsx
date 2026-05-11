@@ -1,7 +1,25 @@
-import { Target, Film, AlertTriangle, Play, Pause, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize } from "lucide-react";
+import {
+  Target,
+  Film,
+  AlertTriangle,
+  Play,
+  Pause,
+  Search,
+  LayoutGrid,
+  List,
+  Columns2,
+  BarChart3,
+  Gauge,
+  Crosshair,
+  MoreHorizontal,
+  Pencil,
+  Maximize,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
+import { exportCorrosionPredictionsPdf } from "@/lib/corrosion-pdf-export";
 import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
@@ -33,7 +51,9 @@ export function CorrosionProjectDetail({
       <div className="mb-2 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{project.name}</h1>
-          <div className="mt-1 text-sm text-gray-500">Corrosion Detection — Video · {project.createdAt}</div>
+          <div className="mt-1 text-sm text-gray-500">
+            Corrosion Detection — Video · {project.createdAt}
+          </div>
         </div>
         {headerExtra}
       </div>
@@ -44,7 +64,9 @@ export function CorrosionProjectDetail({
               key={t}
               onClick={() => setActive(t)}
               className={`border-b-2 pb-3 text-sm font-medium transition-colors -mb-px ${
-                active === t ? "border-[#2E86AB] text-[#2E86AB]" : "border-transparent text-gray-500 hover:text-gray-700"
+                active === t
+                  ? "border-[#2E86AB] text-[#2E86AB]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
               {t}
@@ -66,7 +88,15 @@ export function CorrosionProjectDetail({
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Target;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-lg border border-[#E5E7EB] bg-white p-5">
       <div className="mb-3 flex items-center gap-2">
@@ -98,14 +128,47 @@ function formatDurationLong(secs: number) {
   return `${m} min ${s} sec`;
 }
 
+/** Seconds: show bbox only when playhead is this close to a detection timestamp. */
+const OVERLAY_TIME_WINDOW_SEC = 0.45;
+
+function detectionAtPlayhead(detections: TimelineDetection[], t: number): TimelineDetection | null {
+  let best: TimelineDetection | null = null;
+  let bestDist = Infinity;
+  for (const d of detections) {
+    const dist = Math.abs(d.timestamp - t);
+    if (dist > OVERLAY_TIME_WINDOW_SEC) continue;
+    if (dist < bestDist || (dist === bestDist && best !== null && d.id < best.id)) {
+      best = d;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+function firstDetectionIdByTimestamp(
+  detections: Pick<TimelineDetection, "id" | "timestamp">[],
+): number | null {
+  if (detections.length === 0) return null;
+  const sorted = [...detections].sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
+  return sorted[0]?.id ?? null;
+}
+
 function DetailsTab({ project }: { project: Project }) {
   const frames = project.framesAnalysed ?? 0;
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard icon={Film} label="Video Duration" value={formatTimestamp(project.duration)} />
-        <StatCard icon={Target} label="Frames Analysed" value={frames ? `${frames} / ${frames}` : "—"} />
-        <StatCard icon={AlertTriangle} label="Defects Detected" value={String(project.detections.length)} />
+        <StatCard
+          icon={Target}
+          label="Frames Analysed"
+          value={frames ? `${frames} / ${frames}` : "—"}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Defects Detected"
+          value={String(project.detections.length)}
+        />
       </div>
       <div className="rounded-lg border border-[#E5E7EB] bg-white p-6">
         <h2 className="mb-4 text-[18px] font-bold text-gray-900">Project Information</h2>
@@ -131,15 +194,27 @@ function TimelineTab({
   onDurationKnown: (seconds: number) => void;
 }) {
   const [detections, setDetections] = useState<TimelineDetection[]>(() =>
-    project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus }))
+    project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus })),
   );
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(() =>
+    firstDetectionIdByTimestamp(
+      project.detections.map((d, i) => ({ id: i, timestamp: d.timestamp })),
+    ),
+  );
   const [editingId, setEditingId] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const initialSeekDoneRef = useRef(false);
+  const detectionsRef = useRef(detections);
+  detectionsRef.current = detections;
 
   const selected = detections.find((d) => d.id === selectedId) || null;
+  const overlayDetection = playing
+    ? detectionAtPlayhead(detections, currentTime)
+    : selected && Math.abs(currentTime - selected.timestamp) <= OVERLAY_TIME_WINDOW_SEC
+      ? selected
+      : null;
   const confirmed = detections.filter((d) => d.status === "confirmed").length;
   const dismissed = detections.filter((d) => d.status === "dismissed").length;
   const pending = detections.filter((d) => d.status === "pending").length;
@@ -152,12 +227,19 @@ function TimelineTab({
   const seekTo = (t: number) => {
     const v = videoRef.current;
     if (!v) return;
-    v.currentTime = Math.min(Math.max(0, t), Math.max(0, v.duration - 0.05) || 0);
+    v.muted = true;
+    v.volume = 0;
+    const maxT = v.duration && Number.isFinite(v.duration) ? Math.max(0, v.duration - 0.05) : t;
+    const clamped = Math.min(Math.max(0, t), maxT);
+    v.currentTime = clamped;
+    setCurrentTime(clamped);
   };
 
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    v.muted = true;
+    v.volume = 0;
     if (v.paused) {
       void v.play();
       setPlaying(true);
@@ -168,26 +250,69 @@ function TimelineTab({
   };
 
   useEffect(() => {
+    initialSeekDoneRef.current = false;
+  }, [project.videoURL]);
+
+  useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    const enforceSilent = () => {
+      v.muted = true;
+      v.volume = 0;
+    };
+    enforceSilent();
     const onTime = () => setCurrentTime(v.currentTime);
     const onMeta = () => {
+      enforceSilent();
       if (v.duration && Number.isFinite(v.duration) && v.duration > 0) onDurationKnown(v.duration);
+      const list = detectionsRef.current;
+      if (!initialSeekDoneRef.current && list.length > 0) {
+        initialSeekDoneRef.current = true;
+        const sorted = [...list].sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
+        const first = sorted[0];
+        if (first) {
+          const maxT =
+            v.duration && Number.isFinite(v.duration)
+              ? Math.max(0, v.duration - 0.05)
+              : first.timestamp;
+          const t = Math.min(Math.max(0, first.timestamp), maxT);
+          v.currentTime = t;
+          setCurrentTime(t);
+          setSelectedId(first.id);
+        }
+      }
     };
+    const onVolume = () => enforceSilent();
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("volumechange", onVolume);
+    if (v.readyState >= 1) onMeta();
     return () => {
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("volumechange", onVolume);
     };
   }, [project.videoURL, onDurationKnown]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const d = detectionAtPlayhead(detections, currentTime);
+    setSelectedId(d?.id ?? null);
+  }, [playing, currentTime, detections]);
 
   if (detections.length === 0) {
     return (
       <div className="rounded-lg border border-[#E5E7EB] bg-white p-10 text-center text-sm text-gray-600">
         No corrosion detected in this video.
         <div className="mx-auto mt-6 max-w-2xl">
-          <video ref={videoRef} src={project.videoURL} controls className="w-full rounded-md" />
+          <video
+            ref={videoRef}
+            src={project.videoURL}
+            controls
+            muted
+            playsInline
+            className="w-full rounded-md"
+          />
         </div>
       </div>
     );
@@ -199,27 +324,31 @@ function TimelineTab({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-          <div className="relative w-full overflow-hidden rounded-md bg-[#1f2937]" style={{ aspectRatio: "16/9" }}>
+          <div
+            className="relative w-full overflow-hidden rounded-md bg-[#1f2937]"
+            style={{ aspectRatio: "16/9" }}
+          >
             <video
               ref={videoRef}
               src={project.videoURL}
               className="h-full w-full object-contain"
+              muted
               playsInline
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
             />
-            {selected && (
+            {overlayDetection && (
               <div
                 className="pointer-events-none absolute border-2 border-orange-500 bg-orange-500/20"
                 style={{
-                  left: `${selected.box.x}%`,
-                  top: `${selected.box.y}%`,
-                  width: `${selected.box.width}%`,
-                  height: `${selected.box.height}%`,
+                  left: `${overlayDetection.box.x}%`,
+                  top: `${overlayDetection.box.y}%`,
+                  width: `${overlayDetection.box.width}%`,
+                  height: `${overlayDetection.box.height}%`,
                 }}
               >
                 <span className="absolute -top-6 left-0 rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">
-                  Corrosion — {selected.confidence.toFixed(0)}%
+                  Corrosion — {overlayDetection.confidence.toFixed(0)}%
                 </span>
               </div>
             )}
@@ -230,18 +359,27 @@ function TimelineTab({
               onClick={togglePlay}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2E86AB] text-white hover:bg-[#246d8c]"
             >
-              {playing ? <Pause className="h-4 w-4" fill="currentColor" /> : <Play className="ml-0.5 h-4 w-4" fill="currentColor" />}
+              {playing ? (
+                <Pause className="h-4 w-4" fill="currentColor" />
+              ) : (
+                <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
+              )}
             </button>
             <span className="shrink-0 font-mono text-xs text-gray-600">
               {formatTimestamp(currentTime)} / {formatTimestamp(project.duration)}
             </span>
             <div className="relative h-2 flex-1 rounded-full bg-gray-200">
-              <div className="absolute left-0 top-0 h-full rounded-full bg-[#2E86AB]" style={{ width: `${progressPct}%` }} />
+              <div
+                className="absolute left-0 top-0 h-full rounded-full bg-[#2E86AB]"
+                style={{ width: `${progressPct}%` }}
+              />
               {detections.map((d) => (
                 <div
                   key={d.id}
                   className="group absolute -top-1 h-4 w-3 -translate-x-1/2 cursor-pointer"
-                  style={{ left: `${project.duration ? (d.timestamp / project.duration) * 100 : 0}%` }}
+                  style={{
+                    left: `${project.duration ? (d.timestamp / project.duration) * 100 : 0}%`,
+                  }}
                   onClick={() => {
                     setSelectedId(d.id);
                     seekTo(d.timestamp);
@@ -254,10 +392,11 @@ function TimelineTab({
                 </div>
               ))}
             </div>
-            <button type="button" className="shrink-0 text-gray-500 hover:text-[#2E86AB]" aria-label="Volume">
-              <Volume2 className="h-4 w-4" />
-            </button>
-            <button type="button" className="shrink-0 text-gray-500 hover:text-[#2E86AB]" aria-label="Fullscreen">
+            <button
+              type="button"
+              className="shrink-0 text-gray-500 hover:text-[#2E86AB]"
+              aria-label="Fullscreen"
+            >
               <Maximize className="h-4 w-4" />
             </button>
           </div>
@@ -266,12 +405,14 @@ function TimelineTab({
 
       <div className="space-y-4">
         <InspectionSummary>
-          Analysis complete. {detections.length} instances of corrosion detected across {formatTimestamp(project.duration)} of footage.
+          Analysis complete. {detections.length} instances of corrosion detected across{" "}
+          {formatTimestamp(project.duration)} of footage.
         </InspectionSummary>
         <div className="rounded-lg border border-[#E5E7EB] bg-white p-5">
           <h3 className="mb-3 text-base font-bold text-gray-900">Frame Detections</h3>
           <div className="mb-4 border-b border-[#F0F2F7] pb-3 text-xs text-gray-500">
-            {detections.length} detections · {confirmed} confirmed · {dismissed} dismissed · {pending} pending
+            {detections.length} detections · {confirmed} confirmed · {dismissed} dismissed ·{" "}
+            {pending} pending
           </div>
           <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
             {detections.map((d) => (
@@ -282,11 +423,15 @@ function TimelineTab({
                   seekTo(d.timestamp);
                 }}
                 className={`cursor-pointer rounded-md border p-3 transition ${
-                  selectedId === d.id ? "border-[#2E86AB] bg-[#EEF2FF]" : "border-[#E5E7EB] hover:bg-gray-50"
+                  selectedId === d.id
+                    ? "border-[#2E86AB] bg-[#EEF2FF]"
+                    : "border-[#E5E7EB] hover:bg-gray-50"
                 }`}
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">{formatTimestamp(d.timestamp)}</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {formatTimestamp(d.timestamp)}
+                  </span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs capitalize text-gray-500">{d.status}</span>
                     <button
@@ -323,7 +468,9 @@ function TimelineTab({
                 )}
                 <div className="mb-3 flex gap-4 text-xs">
                   <span className="font-semibold text-[#2E86AB]">{d.confidence.toFixed(1)}%</span>
-                  <span className="font-semibold text-[#2E86AB]">Area {d.area_percent.toFixed(1)}%</span>
+                  <span className="font-semibold text-[#2E86AB]">
+                    Area {d.area_percent.toFixed(1)}%
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -356,7 +503,17 @@ function TimelineTab({
   );
 }
 
-function PredictionStatCard({ icon: Icon, label, value, clickable }: { icon: typeof Target; label: string; value?: string; clickable?: boolean }) {
+function PredictionStatCard({
+  icon: Icon,
+  label,
+  value,
+  clickable,
+}: {
+  icon: typeof Target;
+  label: string;
+  value?: string;
+  clickable?: boolean;
+}) {
   return (
     <div
       className={`rounded-lg border border-[#E5E7EB] bg-white p-5 ${clickable ? "cursor-pointer transition hover:border-[#2E86AB]" : ""}`}
@@ -377,6 +534,7 @@ function PredictionStatCard({ icon: Icon, label, value, clickable }: { icon: typ
 }
 
 function PredictionsTab({ project }: { project: Project }) {
+  const [exportingPdf, setExportingPdf] = useState(false);
   const detections = project.detections;
   const avgScore = detections.length
     ? (detections.reduce((s, d) => s + d.confidence / 100, 0) / detections.length).toFixed(2)
@@ -406,7 +564,10 @@ function PredictionsTab({ project }: { project: Project }) {
             <button type="button" className="border-r border-[#E5E7EB] p-2 text-[#2E86AB]">
               <Columns2 className="h-4 w-4" />
             </button>
-            <button type="button" className="border-r border-[#E5E7EB] p-2 text-gray-500 hover:text-[#2E86AB]">
+            <button
+              type="button"
+              className="border-r border-[#E5E7EB] p-2 text-gray-500 hover:text-[#2E86AB]"
+            >
               <LayoutGrid className="h-4 w-4" />
             </button>
             <button type="button" className="p-2 text-gray-500 hover:text-[#2E86AB]">
@@ -425,10 +586,22 @@ function PredictionsTab({ project }: { project: Project }) {
           </div>
           <button
             type="button"
-            className="border border-[#2E86AB] px-4 py-2 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#2E86AB] hover:text-white"
+            disabled={exportingPdf}
+            onClick={async () => {
+              setExportingPdf(true);
+              try {
+                await exportCorrosionPredictionsPdf(project);
+                toast.success("PDF report downloaded.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "PDF export failed.");
+              } finally {
+                setExportingPdf(false);
+              }
+            }}
+            className="border border-[#2E86AB] bg-[#2E86AB] px-4 py-2 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:bg-[#246d8c] disabled:cursor-not-allowed disabled:opacity-60"
             style={{ borderRadius: 0 }}
           >
-            Export
+            {exportingPdf ? "Exporting…" : "Export"}
           </button>
         </div>
       </div>
@@ -453,8 +626,18 @@ function PredictionsTab({ project }: { project: Project }) {
                 <span className="font-semibold text-[#2E86AB]">{d.area_percent.toFixed(1)}%</span>
               </div>
             </div>
-            <VideoFrameSnapshot videoSrc={project.videoURL} timestamp={d.timestamp} box={d.box} variant="original" />
-            <VideoFrameSnapshot videoSrc={project.videoURL} timestamp={d.timestamp} box={d.box} variant="annotated" />
+            <VideoFrameSnapshot
+              videoSrc={project.videoURL}
+              timestamp={d.timestamp}
+              box={d.box}
+              variant="original"
+            />
+            <VideoFrameSnapshot
+              videoSrc={project.videoURL}
+              timestamp={d.timestamp}
+              box={d.box}
+              variant="annotated"
+            />
           </div>
         ))}
       </div>
