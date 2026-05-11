@@ -30,6 +30,14 @@ export async function fetchCloudProject(id: string): Promise<Project> {
   return data.project;
 }
 
+function resolvePlaybackUrl(project: Project): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const v = project.videoURL;
+  if (v.startsWith("/")) return new URL(v, window.location.origin).href;
+  if (v.startsWith("https://") || v.startsWith("http://")) return v;
+  return undefined;
+}
+
 export async function saveProjectToCloud(project: Project, videoBlob: Blob): Promise<void> {
   const payload = JSON.stringify({
     project: {
@@ -44,10 +52,14 @@ export async function saveProjectToCloud(project: Project, videoBlob: Blob): Pro
     detections: project.detections,
   });
   const fileName = project.fileName ?? "inspection.mp4";
-  const videoFile = new File([videoBlob], fileName, { type: videoBlob.type || "video/mp4" });
   const form = new FormData();
   form.set("payload", payload);
-  form.set("video", videoFile);
+  const playback = resolvePlaybackUrl(project);
+  if (playback) form.set("playbackUrl", playback);
+  if (videoBlob.size > 0) {
+    const videoFile = new File([videoBlob], fileName, { type: videoBlob.type || "video/mp4" });
+    form.set("video", videoFile);
+  }
   const res = await fetch("/api/projects", { method: "POST", body: form });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string };

@@ -5,18 +5,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   // Remote deploy: run `wrangler d1 create speedo-vision-ai` and paste the real database_id here.
+  // R2 is optional: omit r2_buckets until R2 is enabled on the account; use "playbackUrl" on save (see server-projects-api).
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "speedo-vision-ai",
       "database_id": "fe568256-e329-4ac4-8dd6-103036e8e63b",
       "migrations_dir": "migrations/d1"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "VIDEOS",
-      "bucket_name": "speedo-vision-ai-videos"
     }
   ]
 }

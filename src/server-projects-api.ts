@@ -13,6 +13,10 @@ function videoKeyForProject(projectId: string): string {
   return `videos/${projectId}/source`;
 }
 
+function isHttpUrl(s: string): boolean {
+  return s.startsWith("https://") || s.startsWith("http://");
+}
+
 type RowProject = {
   id: string;
   name: string;
@@ -22,6 +26,7 @@ type RowProject = {
   file_name: string | null;
   frames_analysed: number | null;
   video_key: string;
+  video_playback_url: string | null;
   detection_count?: number;
 };
 
@@ -47,17 +52,17 @@ function rowToDetection(r: RowDetection): Detection {
   };
 }
 
-function parseExportPayload(text: string): {
+type ExportPayload = {
+  version?: number;
   project: Omit<Project, "videoURL" | "detections">;
   detections: Detection[];
-} {
-  const data = JSON.parse(text) as {
-    version?: number;
-    project: Omit<Project, "videoURL" | "detections">;
-    detections: Detection[];
-  };
+  playbackUrl?: string;
+};
+
+function parseExportPayload(text: string): ExportPayload {
+  const data = JSON.parse(text) as ExportPayload;
   if (!data.project?.id || !Array.isArray(data.detections)) throw new Error("Invalid manifest");
-  return { project: data.project, detections: data.detections };
+  return data;
 }
 
 export async function handleProjectsApi(request: Request, env: unknown): Promise<Response | null> {
@@ -68,17 +73,14 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
   const cfEnv = env as SpeedoEnv;
 
-  if (!cfEnv.DB || !cfEnv.VIDEOS) {
-    return json(
-      { error: "Cloud storage is not configured. Add D1 (DB) and R2 (VIDEOS) bindings in wrangler.jsonc and apply migrations." },
-      503,
-    );
+  if (!cfEnv.DB) {
+    return json({ error: "D1 is not configured. Add the DB binding in wrangler.jsonc and apply migrations." }, 503);
   }
 
   const db = cfEnv.DB;
   const bucket = cfEnv.VIDEOS;
 
-  const segments = path.split("/").filter(Boolean); // api, projects, ...
+  const segments = path.split("/").filter(Boolean);
 
   try {
     // --- /api/projects/import ---
@@ -87,16 +89,30 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
       const form = await request.formData();
       const manifest = form.get("manifest");
       const video = form.get("video");
-      if (typeof manifest !== "string" || !(video instanceof File)) {
-        return json({ error: "Expected multipart fields: manifest (JSON string), video (file)" }, 400);
+      const playbackField = form.get("playbackUrl");
+      const playback =
+        typeof playbackField === "string" && playbackField.trim() ? playbackField.trim() : undefined;
+      if (typeof manifest !== "string") return json({ error: "Expected multipart field: manifest (JSON string)" }, 400);
+      const parsed = parseExportPayload(manifest);
+      const pb = parsed.playbackUrl ?? playback;
+      if (bucket && video instanceof File && video.size > 0) {
+        const videoKey = videoKeyForProject(parsed.project.id);
+        await bucket.put(videoKey, video.stream(), {
+          httpMetadata: { contentType: video.type || "video/mp4" },
+        });
+        await insertProjectAndDetections(db, parsed.project, parsed.detections, videoKey, null);
+      } else if (pb && isHttpUrl(pb)) {
+        await insertProjectAndDetections(db, parsed.project, parsed.detections, "", pb);
+      } else {
+        return json(
+          {
+            error:
+              "Import requires either a video file (when R2 is enabled) or a valid playbackUrl (https://…) in the manifest or form when R2 is disabled.",
+          },
+          400,
+        );
       }
-      const { project: p, detections } = parseExportPayload(manifest);
-      const videoKey = videoKeyForProject(p.id);
-      await bucket.put(videoKey, video.stream(), {
-        httpMetadata: { contentType: video.type || "video/mp4" },
-      });
-      await insertProjectAndDetections(db, p, detections, videoKey);
-      return json({ ok: true, id: p.id });
+      return json({ ok: true, id: parsed.project.id });
     }
 
     // --- /api/projects (list / create) ---
@@ -104,7 +120,7 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
       if (request.method === "GET") {
         const { results } = await db
           .prepare(
-            `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed, p.video_key,
+            `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed, p.video_key, p.video_playback_url,
               (SELECT COUNT(*) FROM detections d WHERE d.project_id = p.id) AS detection_count
              FROM projects p ORDER BY p.created_at DESC`,
           )
@@ -115,19 +131,33 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
         const form = await request.formData();
         const payloadRaw = form.get("payload");
         const video = form.get("video");
-        if (typeof payloadRaw !== "string" || !(video instanceof File)) {
-          return json({ error: "Expected multipart fields: payload (JSON string), video (file)" }, 400);
-        }
+        const playbackField = form.get("playbackUrl");
+        const playback =
+          typeof playbackField === "string" && playbackField.trim() ? playbackField.trim() : "";
+        if (typeof payloadRaw !== "string") return json({ error: "Expected multipart field: payload (JSON string)" }, 400);
         const body = JSON.parse(payloadRaw) as {
           project: Omit<Project, "videoURL" | "detections">;
           detections: Detection[];
         };
         if (!body.project?.id || !Array.isArray(body.detections)) return json({ error: "Invalid payload" }, 400);
-        const videoKey = videoKeyForProject(body.project.id);
-        await bucket.put(videoKey, video.stream(), {
-          httpMetadata: { contentType: video.type || "video/mp4" },
-        });
-        await insertProjectAndDetections(db, body.project, body.detections, videoKey);
+
+        if (bucket && video instanceof File && video.size > 0) {
+          const videoKey = videoKeyForProject(body.project.id);
+          await bucket.put(videoKey, video.stream(), {
+            httpMetadata: { contentType: video.type || "video/mp4" },
+          });
+          await insertProjectAndDetections(db, body.project, body.detections, videoKey, null);
+        } else if (playback && isHttpUrl(playback)) {
+          await insertProjectAndDetections(db, body.project, body.detections, "", playback);
+        } else {
+          return json(
+            {
+              error:
+                "Provide a non-empty video file (requires R2 on the account) or a playbackUrl (https://…) pointing at the MP4 when R2 is not configured.",
+            },
+            400,
+          );
+        }
         return json({ ok: true, id: body.project.id });
       }
       return json({ error: "Method not allowed" }, 405);
@@ -142,8 +172,15 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
       if (sub === "video") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
-        const row = await db.prepare("SELECT video_key FROM projects WHERE id = ?").bind(id).first<{ video_key: string }>();
+        const row = await db
+          .prepare("SELECT video_key, video_playback_url FROM projects WHERE id = ?")
+          .bind(id)
+          .first<{ video_key: string; video_playback_url: string | null }>();
         if (!row) return json({ error: "Not found" }, 404);
+        if (row.video_playback_url && isHttpUrl(row.video_playback_url)) {
+          return Response.redirect(row.video_playback_url, 302);
+        }
+        if (!bucket || !row.video_key) return json({ error: "Video not available" }, 404);
         const obj = await bucket.get(row.video_key);
         if (!obj?.body) return json({ error: "Video missing" }, 404);
         return new Response(obj.body, {
@@ -165,7 +202,7 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
           .bind(id)
           .all<RowDetection>();
         const detections = (detRows ?? []).map(rowToDetection);
-        const exportBody = {
+        const exportBody: Record<string, unknown> = {
           version: 1,
           project: {
             id: proj.id,
@@ -178,6 +215,7 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
           },
           detections,
         };
+        if (proj.video_playback_url) exportBody.playbackUrl = proj.video_playback_url;
         return new Response(JSON.stringify(exportBody, null, 2), {
           headers: {
             "content-type": "application/json; charset=utf-8",
@@ -197,7 +235,8 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
             .bind(id)
             .all<RowDetection>();
           const detections = (detRows ?? []).map(rowToDetection);
-          const videoURL = `/api/projects/${encodeURIComponent(id)}/video`;
+          const playback = proj.video_playback_url && isHttpUrl(proj.video_playback_url) ? proj.video_playback_url : null;
+          const videoURL = playback ?? `/api/projects/${encodeURIComponent(id)}/video`;
           const project: Project = {
             id: proj.id,
             name: proj.name,
@@ -212,11 +251,14 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
           return json({ project });
         }
         if (request.method === "DELETE") {
-          const row = await db.prepare("SELECT video_key FROM projects WHERE id = ?").bind(id).first<{ video_key: string }>();
+          const row = await db
+            .prepare("SELECT video_key FROM projects WHERE id = ?")
+            .bind(id)
+            .first<{ video_key: string }>();
           if (!row) return json({ error: "Not found" }, 404);
           await db.prepare("DELETE FROM detections WHERE project_id = ?").bind(id).run();
           await db.prepare("DELETE FROM projects WHERE id = ?").bind(id).run();
-          await bucket.delete(row.video_key);
+          if (bucket && row.video_key) await bucket.delete(row.video_key);
           return json({ ok: true });
         }
         return json({ error: "Method not allowed" }, 405);
@@ -235,11 +277,12 @@ async function insertProjectAndDetections(
   project: Omit<Project, "videoURL" | "detections">,
   detections: Detection[],
   videoKey: string,
+  videoPlaybackUrl: string | null,
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO projects (id, name, created_at, duration, status, file_name, frames_analysed, video_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO projects (id, name, created_at, duration, status, file_name, frames_analysed, video_key, video_playback_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          name = excluded.name,
          created_at = excluded.created_at,
@@ -247,7 +290,8 @@ async function insertProjectAndDetections(
          status = excluded.status,
          file_name = excluded.file_name,
          frames_analysed = excluded.frames_analysed,
-         video_key = excluded.video_key`,
+         video_key = excluded.video_key,
+         video_playback_url = excluded.video_playback_url`,
     )
     .bind(
       project.id,
@@ -258,6 +302,7 @@ async function insertProjectAndDetections(
       project.fileName ?? null,
       project.framesAnalysed ?? null,
       videoKey,
+      videoPlaybackUrl,
     )
     .run();
 
