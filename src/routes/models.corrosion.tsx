@@ -1,9 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Target, Film, AlertTriangle, Search, Folder, ChevronRight, X, UploadCloud, CheckCircle2, FileDown } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
-import { useProjects, projectsStore, formatCreatedAt, type Detection } from "@/lib/projects-store";
+import { projectsStore, formatCreatedAt, type Detection } from "@/lib/projects-store";
 import { extractFrames, detectFrame, normalizeDetections } from "@/lib/corrosion-detect";
+import { fetchCloudProjectSummaries, importProjectToCloud } from "@/lib/projects-api";
+import { STATIC_FEATURED_DEMO } from "@/lib/static-featured-demo";
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -11,7 +15,14 @@ export const Route = createFileRoute("/models/corrosion")({
 
 function CorrosionModelPage() {
   const [openNew, setOpenNew] = useState(false);
-  const projects = useProjects();
+  const [openImport, setOpenImport] = useState(false);
+  const qc = useQueryClient();
+  const cloudQ = useQuery({
+    queryKey: ["cloud-projects"],
+    queryFn: fetchCloudProjectSummaries,
+    staleTime: 15_000,
+  });
+
   return (
     <AppShell>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Corrosion Detection — Video</h1>
@@ -19,15 +30,29 @@ function CorrosionModelPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left: Projects */}
         <div className="lg:col-span-3">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-[18px] font-bold text-gray-900">Projects</h2>
-            <button
-              onClick={() => setOpenNew(true)}
-              className="px-4 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
-              style={{ borderRadius: 0 }}
-            >
-              + New Project
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenImport(true)}
+                className="px-4 py-2 bg-white border border-[#2E86AB] text-[#2E86AB] text-xs font-semibold uppercase tracking-wide hover:bg-[#EEF2FF] transition-colors"
+                style={{ borderRadius: 0 }}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <FileDown className="w-3.5 h-3.5" />
+                  Import
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpenNew(true)}
+                className="px-4 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
+                style={{ borderRadius: 0 }}
+              >
+                + New Project
+              </button>
+            </div>
           </div>
 
           <div className="relative mb-4 w-1/3 min-w-[180px]">
@@ -39,8 +64,43 @@ function CorrosionModelPage() {
             />
           </div>
 
+          {cloudQ.isLoading && <div className="text-sm text-gray-500 py-6">Loading cloud projects…</div>}
+          {cloudQ.isError && (
+            <div className="text-sm text-red-600 py-4">
+              Could not load projects: {cloudQ.error instanceof Error ? cloudQ.error.message : "Unknown error"}
+            </div>
+          )}
+          {!cloudQ.isLoading && !cloudQ.isError && cloudQ.data?.length === 0 && (
+            <div className="rounded-lg border border-dashed border-[#E5E7EB] bg-white p-6 text-sm text-gray-600 mb-4">
+              <p className="font-semibold text-gray-900 mb-1">No cloud-saved projects yet</p>
+              <p className="text-xs leading-relaxed mb-3">
+                Use the <strong>Featured demo</strong> below (ships with the site), or run <strong>New Project</strong> and <strong>Save to cloud</strong> once D1/R2 are configured (
+                <code className="text-[11px]">wrangler.jsonc</code>).
+              </p>
+            </div>
+          )}
+
           <div className="space-y-3">
-            {projects.map((p) => (
+            <Link
+              to="/models/corrosion/pipeline-inspection-01"
+              className="flex items-center gap-4 bg-white border border-[#2E86AB]/30 rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition ring-1 ring-[#2E86AB]/10"
+            >
+              <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
+                <Folder className="w-5 h-5 text-[#2E86AB]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">Bundled demo</div>
+                <div className="text-sm font-bold text-gray-900 truncate">{STATIC_FEATURED_DEMO.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}</div>
+              </div>
+              <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded shrink-0">
+                {STATIC_FEATURED_DEMO.detections.length} detections
+              </span>
+              <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">{STATIC_FEATURED_DEMO.status}</span>
+              <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+            </Link>
+
+            {(cloudQ.data ?? []).map((p) => (
               <Link
                 key={p.id}
                 to="/models/corrosion/$projectId"
@@ -52,47 +112,14 @@ function CorrosionModelPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold text-gray-900 truncate">{p.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.createdAt}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.created_at}</div>
                 </div>
-                <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded">{p.detections.length} detections</span>
-                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded">{p.status}</span>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded shrink-0">
+                  {p.detection_count} detections
+                </span>
+                <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded shrink-0">{p.status}</span>
                 <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
               </Link>
-            ))}
-            <Link
-              to="/models/corrosion/pipeline-inspection-01"
-              className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 hover:border-[#2E86AB] hover:shadow-sm transition"
-            >
-              <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                <Folder className="w-5 h-5 text-[#2E86AB]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-gray-900">Pipeline_Inspection_01</div>
-                <div className="text-xs text-gray-500 mt-0.5">Last inspected: 08 May 2025</div>
-              </div>
-              <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded">5 detections</span>
-              <span className="px-2.5 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded">Completed</span>
-              <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-            </Link>
-            {[
-              { name: "Pipeline_Inspection_02", date: "06 May 2025", detections: 3, status: "Processing", statusClass: "bg-blue-100 text-blue-700" },
-              { name: "Tank_Inspection_03", date: "02 May 2025", detections: 8, status: "Completed", statusClass: "bg-green-100 text-green-700" },
-            ].map((p) => (
-              <div
-                key={p.name}
-                className="flex items-center gap-4 bg-white border border-[#E5E7EB] rounded-lg p-4 opacity-60 cursor-not-allowed"
-              >
-                <div className="w-10 h-10 rounded-md bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                  <Folder className="w-5 h-5 text-[#2E86AB]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-gray-900">{p.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">Last inspected: {p.date}</div>
-                </div>
-                <span className="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded">{p.detections} detections</span>
-                <span className={`px-2.5 py-1 text-xs font-semibold rounded ${p.statusClass}`}>{p.status}</span>
-                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-              </div>
             ))}
           </div>
         </div>
@@ -121,12 +148,93 @@ function CorrosionModelPage() {
           </div>
         </div>
       </div>
-      {openNew && <NewProjectModal onClose={() => setOpenNew(false)} />}
+      {openNew && <NewProjectModal onClose={() => setOpenNew(false)} onCreated={() => void qc.invalidateQueries({ queryKey: ["cloud-projects"] })} />}
+      {openImport && (
+        <ImportProjectModal
+          onClose={() => setOpenImport(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ["cloud-projects"] });
+            setOpenImport(false);
+          }}
+        />
+      )}
     </AppShell>
   );
 }
 
-function NewProjectModal({ onClose }: { onClose: () => void }) {
+function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const manifestRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    const mf = manifestRef.current?.files?.[0];
+    const vf = videoRef.current?.files?.[0];
+    if (!mf || !vf) {
+      toast.error("Choose both an export JSON file and the matching video file.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const text = await mf.text();
+      await importProjectToCloud(text, vf);
+      toast.success("Project imported.");
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700" aria-label="Close">
+          <X className="w-5 h-5" />
+        </button>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Import project</h2>
+        <p className="text-xs text-gray-600 mb-4">
+          Use the <strong>Export JSON</strong> file from another deployment, plus the same <strong>video</strong> file (or a re-encoded copy with identical content for the same timestamps).
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Manifest (.json)</label>
+            <input ref={manifestRef} type="file" accept="application/json,.json" className="block w-full text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Video (.mp4)</label>
+            <input ref={videoRef} type="file" accept="video/*" className="block w-full text-sm" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase"
+            style={{ borderRadius: 0 }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void submit()}
+            className="px-4 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase disabled:opacity-50"
+            style={{ borderRadius: 0 }}
+          >
+            {busy ? "Importing…" : "Import"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewProjectModal({ onClose, onCreated }: { onClose: () => void; onCreated?: () => void }) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -191,6 +299,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
       });
       await new Promise((r) => setTimeout(r, 400));
       onClose();
+      onCreated?.();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
     } catch (e: any) {
       setError(e?.message || "Processing failed");

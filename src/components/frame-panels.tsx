@@ -123,3 +123,125 @@ export function LegacyVideoPlaceholder({ filename }: { filename: string }) {
     </div>
   );
 }
+
+type SnapshotBox = { x: number; y: number; width: number; height: number };
+
+/** Renders a single frame from `videoSrc` at `timestamp` (seconds) onto a canvas; annotated variant draws the box overlay in video space. */
+export function VideoFrameSnapshot({
+  videoSrc,
+  timestamp,
+  box,
+  variant,
+  hint,
+}: {
+  videoSrc: string;
+  timestamp: number;
+  box: SnapshotBox;
+  variant: "original" | "annotated";
+  /** Shown when the video fails to load (e.g. missing file under public/). */
+  hint?: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { ref, size } = useCanvasSize<HTMLDivElement>();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    setLoadError(false);
+    const onErr = () => setLoadError(true);
+    v.addEventListener("error", onErr);
+    return () => v.removeEventListener("error", onErr);
+  }, [videoSrc]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    const c = canvasRef.current;
+    if (!v || !c || !size.w || !size.h || loadError) return;
+
+    let cancelled = false;
+
+    const paint = () => {
+      if (cancelled) return;
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      const vw = v.videoWidth;
+      const vh = v.videoHeight;
+      if (!vw || !vh) return;
+      const dpr = window.devicePixelRatio || 1;
+      c.width = size.w * dpr;
+      c.height = size.h * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+      const scale = Math.min(size.w / vw, size.h / vh);
+      const dw = vw * scale;
+      const dh = vh * scale;
+      const ox = (size.w - dw) / 2;
+      const oy = (size.h - dh) / 2;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, size.w, size.h);
+      ctx.drawImage(v, ox, oy, dw, dh);
+      if (variant === "annotated") {
+        const bx = ox + (box.x / 100) * dw;
+        const by = oy + (box.y / 100) * dh;
+        const bw = (box.width / 100) * dw;
+        const bh = (box.height / 100) * dh;
+        ctx.fillStyle = "rgba(249, 115, 22, 0.35)";
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeStyle = "#F97316";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, by, bw, bh);
+      }
+    };
+
+    const seek = () => {
+      if (cancelled || !v.duration || !Number.isFinite(v.duration)) return;
+      const safe = Math.max(0, Math.min(timestamp, v.duration - 1 / 30));
+      v.currentTime = safe;
+    };
+
+    const onSeeked = () => paint();
+    const onLoaded = () => seek();
+
+    v.addEventListener("seeked", onSeeked);
+    v.addEventListener("loadedmetadata", onLoaded);
+    if (v.readyState >= 1) seek();
+
+    return () => {
+      cancelled = true;
+      v.removeEventListener("seeked", onSeeked);
+      v.removeEventListener("loadedmetadata", onLoaded);
+    };
+  }, [videoSrc, timestamp, size.w, size.h, variant, box.x, box.y, box.width, box.height, loadError]);
+
+  const fallback =
+    hint ??
+    (videoSrc.includes("/demo-inspection/")
+      ? "Add public/demo-inspection/demo.mp4 (see README there) to enable previews."
+      : "Video not available for frame previews.");
+
+  if (loadError) {
+    return (
+      <div
+        ref={ref}
+        className="relative flex flex-col items-center justify-center gap-2 rounded-md border border-white/10 p-4 text-center"
+        style={{ aspectRatio: "16/9", background: "#1a1a2a" }}
+      >
+        <p className="text-xs text-white/75">{fallback}</p>
+        <video ref={videoRef} src={videoSrc} muted playsInline preload="metadata" className="hidden" />
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative overflow-hidden rounded-md" style={{ aspectRatio: "16/9", background: "#0f172a" }}>
+      <video ref={videoRef} src={videoSrc} muted playsInline preload="metadata" className="hidden" />
+      <canvas ref={canvasRef} className="block h-full w-full" />
+      <span className="absolute bottom-2 left-2 font-mono text-[11px] text-white">{formatTimestamp(timestamp)}</span>
+      <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+        {variant === "original" ? "Original" : "Annotated"}
+      </span>
+    </div>
+  );
+}
