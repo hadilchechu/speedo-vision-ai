@@ -6,7 +6,10 @@ type D1 = NonNullable<SpeedoEnv["DB"]>;
 const JSON_HDR = { "content-type": "application/json; charset=utf-8" };
 
 function json(data: unknown, status = 200, extra?: HeadersInit): Response {
-  return new Response(JSON.stringify(data), { status, headers: { ...JSON_HDR, ...Object.fromEntries(new Headers(extra)) } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...JSON_HDR, ...Object.fromEntries(new Headers(extra)) },
+  });
 }
 
 function videoKeyForProject(projectId: string): string {
@@ -26,7 +29,8 @@ type RowProject = {
   file_name: string | null;
   frames_analysed: number | null;
   video_key: string;
-  video_playback_url: string | null;
+  /** Present after migration `0002_video_playback_url`; omit when migration not applied. */
+  video_playback_url?: string | null;
   detection_count?: number;
 };
 
@@ -74,7 +78,10 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
   const cfEnv = env as SpeedoEnv;
 
   if (!cfEnv.DB) {
-    return json({ error: "D1 is not configured. Add the DB binding in wrangler.jsonc and apply migrations." }, 503);
+    return json(
+      { error: "D1 is not configured. Add the DB binding in wrangler.jsonc and apply migrations." },
+      503,
+    );
   }
 
   const db = cfEnv.DB;
@@ -84,15 +91,23 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
   try {
     // --- /api/projects/import ---
-    if (segments.length === 3 && segments[0] === "api" && segments[1] === "projects" && segments[2] === "import") {
+    if (
+      segments.length === 3 &&
+      segments[0] === "api" &&
+      segments[1] === "projects" &&
+      segments[2] === "import"
+    ) {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
       const form = await request.formData();
       const manifest = form.get("manifest");
       const video = form.get("video");
       const playbackField = form.get("playbackUrl");
       const playback =
-        typeof playbackField === "string" && playbackField.trim() ? playbackField.trim() : undefined;
-      if (typeof manifest !== "string") return json({ error: "Expected multipart field: manifest (JSON string)" }, 400);
+        typeof playbackField === "string" && playbackField.trim()
+          ? playbackField.trim()
+          : undefined;
+      if (typeof manifest !== "string")
+        return json({ error: "Expected multipart field: manifest (JSON string)" }, 400);
       const parsed = parseExportPayload(manifest);
       const pb = parsed.playbackUrl ?? playback;
       if (bucket && video instanceof File && video.size > 0) {
@@ -120,11 +135,11 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
       if (request.method === "GET") {
         const { results } = await db
           .prepare(
-            `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed, p.video_key, p.video_playback_url,
+            `SELECT p.id, p.name, p.created_at, p.duration, p.status, p.file_name, p.frames_analysed,
               (SELECT COUNT(*) FROM detections d WHERE d.project_id = p.id) AS detection_count
              FROM projects p ORDER BY p.created_at DESC`,
           )
-          .all<RowProject>();
+          .all<Omit<RowProject, "video_key" | "video_playback_url">>();
         return json({ projects: results ?? [] });
       }
       if (request.method === "POST") {
@@ -134,12 +149,14 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
         const playbackField = form.get("playbackUrl");
         const playback =
           typeof playbackField === "string" && playbackField.trim() ? playbackField.trim() : "";
-        if (typeof payloadRaw !== "string") return json({ error: "Expected multipart field: payload (JSON string)" }, 400);
+        if (typeof payloadRaw !== "string")
+          return json({ error: "Expected multipart field: payload (JSON string)" }, 400);
         const body = JSON.parse(payloadRaw) as {
           project: Omit<Project, "videoURL" | "detections">;
           detections: Detection[];
         };
-        if (!body.project?.id || !Array.isArray(body.detections)) return json({ error: "Invalid payload" }, 400);
+        if (!body.project?.id || !Array.isArray(body.detections))
+          return json({ error: "Invalid payload" }, 400);
 
         if (bucket && video instanceof File && video.size > 0) {
           const videoKey = videoKeyForProject(body.project.id);
@@ -173,12 +190,13 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
       if (sub === "video") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         const row = await db
-          .prepare("SELECT video_key, video_playback_url FROM projects WHERE id = ?")
+          .prepare("SELECT * FROM projects WHERE id = ?")
           .bind(id)
-          .first<{ video_key: string; video_playback_url: string | null }>();
+          .first<RowProject>();
         if (!row) return json({ error: "Not found" }, 404);
-        if (row.video_playback_url && isHttpUrl(row.video_playback_url)) {
-          return Response.redirect(row.video_playback_url, 302);
+        const playbackUrl = row.video_playback_url;
+        if (playbackUrl && isHttpUrl(playbackUrl)) {
+          return Response.redirect(playbackUrl, 302);
         }
         if (!bucket || !row.video_key) return json({ error: "Video not available" }, 404);
         const obj = await bucket.get(row.video_key);
@@ -193,7 +211,10 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
       if (sub === "export") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
-        const proj = await db.prepare("SELECT * FROM projects WHERE id = ?").bind(id).first<RowProject>();
+        const proj = await db
+          .prepare("SELECT * FROM projects WHERE id = ?")
+          .bind(id)
+          .first<RowProject>();
         if (!proj) return json({ error: "Not found" }, 404);
         const { results: detRows } = await db
           .prepare(
@@ -226,7 +247,10 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
 
       if (segments.length === 3) {
         if (request.method === "GET") {
-          const proj = await db.prepare("SELECT * FROM projects WHERE id = ?").bind(id).first<RowProject>();
+          const proj = await db
+            .prepare("SELECT * FROM projects WHERE id = ?")
+            .bind(id)
+            .first<RowProject>();
           if (!proj) return json({ error: "Not found" }, 404);
           const { results: detRows } = await db
             .prepare(
@@ -235,7 +259,10 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
             .bind(id)
             .all<RowDetection>();
           const detections = (detRows ?? []).map(rowToDetection);
-          const playback = proj.video_playback_url && isHttpUrl(proj.video_playback_url) ? proj.video_playback_url : null;
+          const playback =
+            proj.video_playback_url && isHttpUrl(proj.video_playback_url)
+              ? proj.video_playback_url
+              : null;
           const videoURL = playback ?? `/api/projects/${encodeURIComponent(id)}/video`;
           const project: Project = {
             id: proj.id,
@@ -272,6 +299,14 @@ export async function handleProjectsApi(request: Request, env: unknown): Promise
   }
 }
 
+function isMissingVideoPlaybackColumnError(e: unknown): boolean {
+  const s = e instanceof Error ? e.message : String(e);
+  return (
+    s.includes("video_playback_url") &&
+    (s.includes("no such column") || s.includes("does not exist") || s.includes("Unknown column"))
+  );
+}
+
 async function insertProjectAndDetections(
   db: D1,
   project: Omit<Project, "videoURL" | "detections">,
@@ -279,9 +314,10 @@ async function insertProjectAndDetections(
   videoKey: string,
   videoPlaybackUrl: string | null,
 ): Promise<void> {
-  await db
-    .prepare(
-      `INSERT INTO projects (id, name, created_at, duration, status, file_name, frames_analysed, video_key, video_playback_url)
+  try {
+    await db
+      .prepare(
+        `INSERT INTO projects (id, name, created_at, duration, status, file_name, frames_analysed, video_key, video_playback_url)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          name = excluded.name,
@@ -292,19 +328,51 @@ async function insertProjectAndDetections(
          frames_analysed = excluded.frames_analysed,
          video_key = excluded.video_key,
          video_playback_url = excluded.video_playback_url`,
-    )
-    .bind(
-      project.id,
-      project.name,
-      project.createdAt,
-      project.duration,
-      project.status,
-      project.fileName ?? null,
-      project.framesAnalysed ?? null,
-      videoKey,
-      videoPlaybackUrl,
-    )
-    .run();
+      )
+      .bind(
+        project.id,
+        project.name,
+        project.createdAt,
+        project.duration,
+        project.status,
+        project.fileName ?? null,
+        project.framesAnalysed ?? null,
+        videoKey,
+        videoPlaybackUrl,
+      )
+      .run();
+  } catch (e) {
+    if (!isMissingVideoPlaybackColumnError(e)) throw e;
+    if (videoPlaybackUrl) {
+      throw new Error(
+        "D1 is missing column video_playback_url. Apply migrations: wrangler d1 migrations apply speedo-vision-ai --remote",
+      );
+    }
+    await db
+      .prepare(
+        `INSERT INTO projects (id, name, created_at, duration, status, file_name, frames_analysed, video_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         created_at = excluded.created_at,
+         duration = excluded.duration,
+         status = excluded.status,
+         file_name = excluded.file_name,
+         frames_analysed = excluded.frames_analysed,
+         video_key = excluded.video_key`,
+      )
+      .bind(
+        project.id,
+        project.name,
+        project.createdAt,
+        project.duration,
+        project.status,
+        project.fileName ?? null,
+        project.framesAnalysed ?? null,
+        videoKey,
+      )
+      .run();
+  }
 
   await db.prepare("DELETE FROM detections WHERE project_id = ?").bind(project.id).run();
 

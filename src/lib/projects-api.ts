@@ -17,7 +17,9 @@ export async function fetchCloudProjectSummaries(): Promise<CloudProjectSummary[
   const res = await fetch("/api/projects");
   if (!res.ok) {
     if (res.status === 503) return [];
-    throw new Error(`List projects failed: ${res.status}`);
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
+    const hint = body?.error ? `: ${body.error}` : "";
+    throw new Error(`List projects failed: ${res.status}${hint}`);
   }
   const data = (await res.json()) as ListResponse;
   return data.projects ?? [];
