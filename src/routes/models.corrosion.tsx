@@ -186,6 +186,8 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         detections,
         status: "Completed",
         duration,
+        fileName: file.name,
+        framesAnalysed: frames.length,
       });
       await new Promise((r) => setTimeout(r, 400));
       onClose();
