@@ -2,50 +2,50 @@ import type { Detection, Project } from "@/lib/projects-store";
 
 /**
  * Bundled featured inspection: `/models/corrosion/pipeline-inspection-01`.
- * Video: `public/demo-inspection/demo.mp4` (~5s clip).
+ * Video: `public/demo-inspection/demo.mp4`.
  *
- * Bounding boxes are **illustrative** (hand-placed on the stock hood shot). Uploaded projects use
- * your real model output and are usually tighter on rust. To refresh this demo from the pipeline,
- * run analysis on `demo.mp4` and paste the resulting `detections` JSON here.
+ * `demoDetections` is **real model output** (same shape as Export JSON): sampled every 2s via
+ * `extractFrames` + `detectFrame` on `demo.mp4`. Re-export from the app and paste here if you
+ * change the clip or retrain the API.
  */
 const DEMO_VIDEO_PATH = "/demo-inspection/demo.mp4";
 
-/** Five hits across ~5s — boxes biased toward left/right rust bands typical of this b-roll. */
+/** Model run on `demo.mp4` (3 frames → 5 boxes where the API returned multiple regions). */
 const demoDetections: Detection[] = [
   {
-    timestamp: 0.6,
-    label: "Corrosion detected",
-    confidence: 92,
-    area_percent: 5.8,
-    box: { x: 4, y: 28, width: 32, height: 38 },
+    timestamp: 0,
+    label: "Corrosion Detected",
+    confidence: 86.7,
+    area_percent: 1.9,
+    box: { x: 60.3, y: 56, width: 16, height: 11.8 },
   },
   {
-    timestamp: 1.5,
-    label: "Corrosion detected",
-    confidence: 89,
-    area_percent: 4.5,
-    box: { x: 22, y: 32, width: 28, height: 30 },
+    timestamp: 2,
+    label: "Corrosion Detected",
+    confidence: 86.2,
+    area_percent: 1.9,
+    box: { x: 60, y: 46.4, width: 16.3, height: 11.7 },
   },
   {
-    timestamp: 2.4,
-    label: "Corrosion detected",
-    confidence: 87,
-    area_percent: 5.2,
-    box: { x: 36, y: 44, width: 30, height: 26 },
+    timestamp: 2,
+    label: "Corrosion Detected",
+    confidence: 67.4,
+    area_percent: 0.9,
+    box: { x: 61.7, y: 91.4, width: 11, height: 8.6 },
   },
   {
-    timestamp: 3.4,
-    label: "Corrosion detected",
-    confidence: 84,
-    area_percent: 4.1,
-    box: { x: 54, y: 30, width: 26, height: 32 },
+    timestamp: 4,
+    label: "Corrosion Detected",
+    confidence: 83.2,
+    area_percent: 1.8,
+    box: { x: 60.3, y: 38.8, width: 15.9, height: 11.4 },
   },
   {
-    timestamp: 4.5,
-    label: "Corrosion detected",
-    confidence: 90,
-    area_percent: 6.0,
-    box: { x: 68, y: 26, width: 30, height: 36 },
+    timestamp: 4,
+    label: "Corrosion Detected",
+    confidence: 37.5,
+    area_percent: 1.7,
+    box: { x: 61.8, y: 83.6, width: 10.7, height: 16.2 },
   },
 ];
 
@@ -55,11 +55,10 @@ export const STATIC_FEATURED_DEMO: Project = {
   id: STATIC_FEATURED_DEMO_ID,
   name: "Featured inspection demo",
   videoURL: DEMO_VIDEO_PATH,
-  createdAt: "08 May 2025",
+  createdAt: "12 May 2026",
   detections: demoDetections,
   status: "Completed",
-  /** Matches bundled clip length; Timeline refreshes from `<video>` metadata when it loads. */
-  duration: 5,
-  fileName: "demo_inspection.mp4",
-  framesAnalysed: 5,
+  duration: 5.515011,
+  fileName: "demo.mp4",
+  framesAnalysed: 3,
 };
