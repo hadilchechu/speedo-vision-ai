@@ -25,6 +25,9 @@ coverage
 .wrangler/
 .dev.vars
 
+# Lovable.dev template metadata (optional locally; not needed for builds)
+.lovable/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

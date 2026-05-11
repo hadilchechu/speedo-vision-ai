@@ -22,8 +22,8 @@ AI-assisted **video inspection** for industrial corrosion detection: upload foot
 
 ## Prerequisites
 
-- **Node.js** 22+ (or Bun for lockfile parity with CI)
-- **npm** / **bun** for installs
+- **Node.js** 22+
+- **npm** (primary); **bun** optional if you refresh `bun.lock` after dependency changes
 - **Cloudflare account** (only if you deploy or use D1/R2)
 
 ## Local development
@@ -36,6 +36,35 @@ npm run dev
 ```
 
 Open the URL Vite prints (usually `http://localhost:5173`).
+
+### Why the repo root looks busy
+
+Vite, ESLint, Prettier, TypeScript, and Wrangler **expect config next to `package.json`**—that is normal. Most code lives in **`src/`**; **`public/`** is static assets; **`migrations/d1/`** is the database schema.
+
+| Root file | Purpose |
+|-----------|---------|
+| `vite.config.ts` | Vite + TanStack Start |
+| `eslint.config.js`, `.prettierrc`, `.prettierignore` | Lint & format |
+| `components.json` | shadcn/ui paths |
+| `tsconfig.json` | TypeScript |
+| `wrangler.jsonc` | Cloudflare Workers + D1 binding |
+| `vercel.json` | Optional SPA rewrites on Vercel |
+
+### Two lockfiles (`package-lock.json` + `bun.lock`)
+
+Both are committed intentionally:
+
+- **`package-lock.json`** — use with **`npm install`** / **`npm ci`** (typical local flow).
+- **`bun.lock`** — needed if CI (e.g. Cloudflare) runs **`bun install --frozen-lockfile`**.
+
+After **changing dependencies**, refresh both locks so installs stay reproducible:
+
+```bash
+npm install
+bun install
+```
+
+To use **only one** package manager in CI, update your pipeline first—then you can drop the other lockfile.
 
 | Script | Purpose |
 |--------|---------|
