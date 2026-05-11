@@ -82,7 +82,8 @@ function ModelCard({ model }: { model: Model }) {
 function ModelsListPage() {
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Models</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Models</h1>
+      <p className="text-sm text-gray-500 mt-1 mb-6">Manage your AI inspection models</p>
       <div className="flex items-center gap-3 mb-6">
         <FilterSelect label="All Models" />
         <FilterSelect label="Newest first" />
