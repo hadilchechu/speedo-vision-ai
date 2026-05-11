@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Target, Play, Pause, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize } from "lucide-react";
+import { Target, Film, AlertTriangle, Play, Pause, Sparkles, Search, LayoutGrid, List, Columns2, BarChart3, Gauge, Crosshair, MoreHorizontal, Pencil, Volume2, Maximize } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { useProjects, formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
@@ -12,8 +12,8 @@ function ProjectPage() {
   const { projectId } = Route.useParams();
   const projects = useProjects();
   const project = projects.find((p) => p.id === projectId);
-  const tabs = ["Timeline", "Predictions"];
-  const [active, setActive] = useState("Timeline");
+  const tabs = ["Details", "Timeline", "Predictions"];
+  const [active, setActive] = useState("Details");
 
   if (!project) {
     return (
@@ -26,8 +26,7 @@ function ProjectPage() {
 
   return (
     <AppShell>
-      <Link to="/models/corrosion" className="text-sm text-[#2E86AB] hover:underline">← Corrosion Detection — Video</Link>
-      <div className="flex items-start justify-between mb-2 gap-4 mt-3">
+      <div className="flex items-start justify-between mb-2 gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{project.name}</h1>
           <div className="text-sm text-gray-500 mt-1">Corrosion Detection — Video · {project.createdAt}</div>
@@ -48,9 +47,65 @@ function ProjectPage() {
           ))}
         </div>
       </div>
+      {active === "Details" && <DetailsTab project={project} />}
       {active === "Timeline" && <TimelineTab project={project} />}
       {active === "Predictions" && <PredictionsTab project={project} />}
     </AppShell>
+  );
+}
+
+function StatCard({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
+  return (
+    <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-md bg-[#EEF2FF] flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#2E86AB]" />
+        </div>
+        <span className="text-sm text-gray-500">{label}</span>
+      </div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+    </div>
+  );
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex text-sm py-2">
+      <span className="text-gray-500 w-40">{label}</span>
+      <span className="text-gray-400 mr-4">:</span>
+      <span className="font-semibold text-gray-900">{value}</span>
+    </div>
+  );
+}
+
+function formatDurationLong(secs: number) {
+  const m = Math.floor(secs / 60);
+  const s = Math.round(secs % 60);
+  if (m === 0) return `${s} second${s === 1 ? "" : "s"}`;
+  if (s === 0) return `${m} minute${m === 1 ? "" : "s"}`;
+  return `${m} min ${s} sec`;
+}
+
+function DetailsTab({ project }: { project: Project }) {
+  const frames = project.framesAnalysed ?? 0;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard icon={Film} label="Video Duration" value={formatTimestamp(project.duration)} />
+        <StatCard icon={Target} label="Frames Analysed" value={`${frames} / ${frames}`} />
+        <StatCard icon={AlertTriangle} label="Defects Detected" value={String(project.detections.length)} />
+      </div>
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+        <h2 className="text-[18px] font-bold text-gray-900 mb-4">Project Information</h2>
+        <div className="divide-y divide-[#F0F2F7]">
+          <MetaRow label="Video File" value={project.fileName ?? `${project.name}.mp4`} />
+          <MetaRow label="Uploaded" value={project.createdAt} />
+          <MetaRow label="Status" value={project.status} />
+          <MetaRow label="Model Used" value="Corrosion Detection — Video" />
+          <MetaRow label="Duration" value={formatDurationLong(project.duration)} />
+        </div>
+      </div>
+    </div>
   );
 }
 
