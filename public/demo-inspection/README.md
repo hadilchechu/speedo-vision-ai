@@ -11,7 +11,7 @@ The app serves it at `/demo-inspection/demo.mp4`. The featured project (`/models
 
 After you replace the clip, update the baked metadata in `src/lib/static-featured-demo.ts`:
 
-- `duration` (seconds) — report/model span; the player also reads duration from the file. **Use a `demo.mp4` that is at least as long as your last detection timestamp** so Timeline scrubbing and frame thumbnails match the inspection (a shorter file cannot show frames at later times).
+The **stock** repo ships a short **~5s** `demo.mp4` with **five** baked detections spread between **0.6s–4.5s** in `static-featured-demo.ts` so every marker is seekable in that clip. If you replace the file with a longer inspection, update timestamps so **every detection time is ≤ the real video duration**.
 - `framesAnalysed` — should match how many frames you want to show in Details (e.g. from your extraction interval).  
 - Each entry in `demoDetections`: `timestamp` (seconds), `box` `{ x, y, width, height }` as **percentages of the video frame** (0–100), plus `confidence` / `area_percent` / `label` as you want them displayed.
 

@@ -44,22 +44,7 @@ export function CorrosionProjectDetail({
     setUiDuration(project.duration);
   }, [project.id, project.duration]);
 
-  /** Length reported by the video file once metadata loads (may be shorter than model span). */
-  const fileDurationSeconds = uiDuration || project.duration;
-  const maxDetectionTimestamp =
-    project.detections.length === 0 ? 0 : Math.max(...project.detections.map((d) => d.timestamp));
-  /**
-   * Timeline / Predictions / PDF use this so scrubber and markers stay aligned with inspection
-   * timestamps even when `demo.mp4` metadata is shorter — replace the file with the full clip
-   * so seeks past the file end still show the right frames.
-   */
-  const timelineDurationSeconds = Math.max(
-    project.duration,
-    maxDetectionTimestamp + 0.01,
-    fileDurationSeconds,
-  );
-  const displayProject: Project = { ...project, duration: fileDurationSeconds };
-  const timelineProject: Project = { ...project, duration: timelineDurationSeconds };
+  const displayProject: Project = { ...project, duration: uiDuration || project.duration };
 
   return (
     <AppShell>
@@ -93,12 +78,12 @@ export function CorrosionProjectDetail({
       {active === "Timeline" && (
         <TimelineTab
           key={project.id}
-          project={timelineProject}
+          project={displayProject}
           defaultReviewStatus={defaultReviewStatus}
           onDurationKnown={setUiDuration}
         />
       )}
-      {active === "Predictions" && <PredictionsTab key={project.id} project={timelineProject} />}
+      {active === "Predictions" && <PredictionsTab key={project.id} project={displayProject} />}
     </AppShell>
   );
 }
