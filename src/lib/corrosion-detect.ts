@@ -1,8 +1,14 @@
 import type { Detection } from "./projects-store";
 
+/** Seconds between sampled frames for corrosion inference (smaller = denser timeline, more API calls). */
+export const CORROSION_SAMPLE_INTERVAL_SEC = 0.25;
+
 export type Frame = { blob: Blob; timestamp: number };
 
-export async function extractFrames(videoFile: File, intervalSec = 2): Promise<{ frames: Frame[]; duration: number; videoURL: string }> {
+export async function extractFrames(
+  videoFile: File,
+  intervalSec = CORROSION_SAMPLE_INTERVAL_SEC,
+): Promise<{ frames: Frame[]; duration: number; videoURL: string }> {
   const videoURL = URL.createObjectURL(videoFile);
   const video = document.createElement("video");
   video.src = videoURL;

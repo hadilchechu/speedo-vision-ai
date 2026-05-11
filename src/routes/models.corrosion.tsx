@@ -323,7 +323,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       setPhase("extracting");
-      const { frames, duration, videoURL } = await extractFrames(file, 2);
+      const { frames, duration, videoURL } = await extractFrames(file);
       setPhase("analysing");
       setAnalyseStatus({ done: 0, total: frames.length });
       const detections: Detection[] = [];
