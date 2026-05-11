@@ -31,7 +31,7 @@ export async function extractFrames(videoFile: File, intervalSec = 2): Promise<{
   return { frames, duration, videoURL };
 }
 
-const API_URL = "https://overgrown-wrath-prototype.ngrok-free.dev/detect";
+const API_URL = "https://hadilc-speedo-vision-api.hf.space/detect";
 
 export async function detectFrame(blob: Blob): Promise<any> {
   const formData = new FormData();
@@ -39,7 +39,6 @@ export async function detectFrame(blob: Blob): Promise<any> {
   const res = await fetch(API_URL, {
     method: "POST",
     body: formData,
-    headers: { "ngrok-skip-browser-warning": "true" },
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return await res.json();
