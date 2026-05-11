@@ -56,21 +56,6 @@ export function formatTimestamp(t: number) {
   return `${m}:${s}`;
 }
 
-/** Small slack so floating-point video duration does not drop the last frame's detection. */
-export const DETECTION_DURATION_EPSILON_SEC = 0.05;
-
-/**
- * Detections with timestamps past the clip length are dropped (e.g. baked JSON from a long run
- * paired with a shorter replacement video, or stale `duration` before metadata loads).
- */
-export function detectionsWithinVideoDuration(
-  detections: Detection[],
-  durationSeconds: number,
-): Detection[] {
-  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return detections;
-  return detections.filter((d) => d.timestamp <= durationSeconds + DETECTION_DURATION_EPSILON_SEC);
-}
-
 export function formatCreatedAt(d = new Date()) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }

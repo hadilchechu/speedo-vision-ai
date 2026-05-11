@@ -11,11 +11,9 @@ The app serves it at `/demo-inspection/demo.mp4`. The featured project (`/models
 
 After you replace the clip, update the baked metadata in `src/lib/static-featured-demo.ts`:
 
-- `duration` (seconds) — or rely on the player: the UI reads real duration from the file once it loads; the initial value is only used before metadata loads.  
+- `duration` (seconds) — report/model span; the player also reads duration from the file. **Use a `demo.mp4` that is at least as long as your last detection timestamp** so Timeline scrubbing and frame thumbnails match the inspection (a shorter file cannot show frames at later times).
 - `framesAnalysed` — should match how many frames you want to show in Details (e.g. from your extraction interval).  
-- Each entry in `demoDetections`: `timestamp` (seconds), `box` `{ x, y, width, height }` as **percentages of the video frame** (0–100), plus `confidence` / `area_percent` / `label` as you want them displayed. **Every `timestamp` must be ≤ the real video length** (or it will be hidden in Timeline, Predictions, PDF export, and Details counts).
-
-The app also **drops detections past the current clip duration** automatically so a shorter replacement video does not keep stale rows from an older, longer run.
+- Each entry in `demoDetections`: `timestamp` (seconds), `box` `{ x, y, width, height }` as **percentages of the video frame** (0–100), plus `confidence` / `area_percent` / `label` as you want them displayed.
 
 Optional: re-run the in-app inspection flow once against your file, copy the resulting `detections` array from the browser devtools or from a small script using `extractFrames` + `detectFrame`, and paste into `static-featured-demo.ts` so boxes align with the model.
 

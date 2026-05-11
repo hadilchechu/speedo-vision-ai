@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Detection, Project } from "@/lib/projects-store";
-import { detectionsWithinVideoDuration, formatTimestamp } from "@/lib/projects-store";
+import { formatTimestamp } from "@/lib/projects-store";
 
 const THUMB_W = 380;
 const THUMB_H = Math.round((THUMB_W * 9) / 16);
@@ -111,7 +111,7 @@ function safeFileSlug(name: string) {
  * Builds a corrosion inspection PDF: summary metrics, a precision/score table, and per-detection original + annotated frames.
  */
 export async function exportCorrosionPredictionsPdf(project: Project): Promise<void> {
-  const detections = detectionsWithinVideoDuration(project.detections, project.duration);
+  const detections = project.detections;
   const margin = 40;
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
