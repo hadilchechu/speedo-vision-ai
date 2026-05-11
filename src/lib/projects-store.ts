@@ -16,6 +16,8 @@ export type Project = {
   detections: Detection[];
   status: string;
   duration: number;
+  fileName?: string;
+  framesAnalysed?: number;
 };
 
 let projects: Project[] = [];
