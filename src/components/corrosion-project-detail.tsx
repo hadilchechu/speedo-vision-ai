@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
 import { exportCorrosionPredictionsPdf } from "@/lib/corrosion-pdf-export";
-import { formatTimestamp, type Project } from "@/lib/projects-store";
+import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
 
@@ -128,21 +128,30 @@ function formatDurationLong(secs: number) {
   return `${m} min ${s} sec`;
 }
 
-/** Seconds: show bbox only when playhead is this close to a detection timestamp. */
+/** Seconds: overlays match detections whose timestamp is within this distance of the playhead. */
 const OVERLAY_TIME_WINDOW_SEC = 0.45;
 
-function detectionAtPlayhead(detections: TimelineDetection[], t: number): TimelineDetection | null {
-  let best: TimelineDetection | null = null;
-  let bestDist = Infinity;
-  for (const d of detections) {
-    const dist = Math.abs(d.timestamp - t);
-    if (dist > OVERLAY_TIME_WINDOW_SEC) continue;
-    if (dist < bestDist || (dist === bestDist && best !== null && d.id < best.id)) {
-      best = d;
-      bestDist = dist;
-    }
-  }
-  return best;
+/** Closest detection to the playhead (for list selection while playing). */
+function primaryDetectionAtPlayhead(
+  detections: TimelineDetection[],
+  t: number,
+): TimelineDetection | null {
+  const near = detectionsNearPlayhead(detections, t);
+  return near[0] ?? null;
+}
+
+/** All detections in the playhead window, closest first (for drawing every box while playing). */
+function detectionsNearPlayhead(
+  detections: TimelineDetection[],
+  t: number,
+  windowSec = OVERLAY_TIME_WINDOW_SEC,
+): TimelineDetection[] {
+  const near = detections.filter((d) => Math.abs(d.timestamp - t) <= windowSec);
+  near.sort(
+    (a, b) =>
+      Math.abs(a.timestamp - t) - Math.abs(b.timestamp - t) || a.id - b.id,
+  );
+  return near;
 }
 
 function firstDetectionIdByTimestamp(
@@ -213,11 +222,11 @@ function TimelineTab({
   const [mediaDurationSec, setMediaDurationSec] = useState<number | null>(null);
 
   const selected = detections.find((d) => d.id === selectedId) || null;
-  const overlayDetection = playing
-    ? detectionAtPlayhead(detections, currentTime)
+  const overlayDetections = playing
+    ? detectionsNearPlayhead(detections, currentTime)
     : selected && Math.abs(currentTime - selected.timestamp) <= OVERLAY_TIME_WINDOW_SEC
-      ? selected
-      : null;
+      ? [selected]
+      : [];
   const confirmed = detections.filter((d) => d.status === "confirmed").length;
   const dismissed = detections.filter((d) => d.status === "dismissed").length;
   const pending = detections.filter((d) => d.status === "pending").length;
@@ -303,7 +312,7 @@ function TimelineTab({
 
   useEffect(() => {
     if (!playing) return;
-    const d = detectionAtPlayhead(detections, currentTime);
+    const d = primaryDetectionAtPlayhead(detections, currentTime);
     setSelectedId(d?.id ?? null);
   }, [playing, currentTime, detections]);
 
@@ -344,21 +353,26 @@ function TimelineTab({
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
             />
-            {overlayDetection && (
+            {overlayDetections.map((d, idx) => (
               <div
+                key={d.id}
                 className="pointer-events-none absolute border-2 border-orange-500 bg-orange-500/20"
                 style={{
-                  left: `${overlayDetection.box.x}%`,
-                  top: `${overlayDetection.box.y}%`,
-                  width: `${overlayDetection.box.width}%`,
-                  height: `${overlayDetection.box.height}%`,
+                  left: `${d.box.x}%`,
+                  top: `${d.box.y}%`,
+                  width: `${d.box.width}%`,
+                  height: `${d.box.height}%`,
+                  zIndex: 10 + idx,
                 }}
               >
-                <span className="absolute -top-6 left-0 rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">
-                  Corrosion — {overlayDetection.confidence.toFixed(0)}%
+                <span
+                  className="absolute left-0 rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white shadow"
+                  style={{ top: `${-22 - Math.min(idx, 5) * 16}px` }}
+                >
+                  Corrosion — {d.confidence.toFixed(0)}%
                 </span>
               </div>
-            )}
+            ))}
           </div>
           <div className="mt-4 flex items-center gap-3 px-1">
             <button
