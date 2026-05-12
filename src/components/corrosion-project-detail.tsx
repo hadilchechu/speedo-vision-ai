@@ -154,6 +154,54 @@ function detectionsNearPlayhead(
   return near;
 }
 
+function iouTimelineBox(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): number {
+  const ax2 = a.x + a.width;
+  const ay2 = a.y + a.height;
+  const bx2 = b.x + b.width;
+  const by2 = b.y + b.height;
+  const ix1 = Math.max(a.x, b.x);
+  const iy1 = Math.max(a.y, b.y);
+  const ix2 = Math.min(ax2, bx2);
+  const iy2 = Math.min(ay2, by2);
+  const iw = Math.max(0, ix2 - ix1);
+  const ih = Math.max(0, iy2 - iy1);
+  const inter = iw * ih;
+  const areaA = Math.max(0, a.width) * Math.max(0, a.height);
+  const areaB = Math.max(0, b.width) * Math.max(0, b.height);
+  const union = areaA + areaB - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+/** IoU for overlay dedupe: same physical patch repeated every sample collapses to one box. */
+const OVERLAY_PLAYBACK_SPATIAL_IOU = 0.38;
+/** Small lookahead so the last sampled frame still paints before playhead passes it. */
+const OVERLAY_PLAYBACK_LOOKAHEAD_SEC = 0.2;
+
+/**
+ * While playing: show every *distinct* defect seen so far (timestamp ≤ playhead), not only the
+ * narrow ±0.45s slice (which misses neighbours at 0.25s spacing and stacks identical hood boxes).
+ */
+function overlayDetectionsWhilePlaying(
+  detections: TimelineDetection[],
+  currentTime: number,
+): TimelineDetection[] {
+  const tMax = currentTime + OVERLAY_PLAYBACK_LOOKAHEAD_SEC;
+  const pool = detections
+    .filter((d) => d.timestamp <= tMax)
+    .sort((a, b) => b.timestamp - a.timestamp || b.confidence - a.confidence);
+  const kept: TimelineDetection[] = [];
+  for (const d of pool) {
+    if (!kept.some((k) => iouTimelineBox(k.box, d.box) >= OVERLAY_PLAYBACK_SPATIAL_IOU)) {
+      kept.push(d);
+    }
+  }
+  kept.sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
+  return kept;
+}
+
 function firstDetectionIdByTimestamp(
   detections: Pick<TimelineDetection, "id" | "timestamp">[],
 ): number | null {
@@ -223,7 +271,7 @@ function TimelineTab({
 
   const selected = detections.find((d) => d.id === selectedId) || null;
   const overlayDetections = playing
-    ? detectionsNearPlayhead(detections, currentTime)
+    ? overlayDetectionsWhilePlaying(detections, currentTime)
     : selected && Math.abs(currentTime - selected.timestamp) <= OVERLAY_TIME_WINDOW_SEC
       ? [selected]
       : [];
@@ -315,6 +363,20 @@ function TimelineTab({
     const d = primaryDetectionAtPlayhead(detections, currentTime);
     setSelectedId(d?.id ?? null);
   }, [playing, currentTime, detections]);
+
+  /** Smoother playhead than `timeupdate` alone so overlays track the video. */
+  useEffect(() => {
+    if (!playing) return;
+    const v = videoRef.current;
+    if (!v) return;
+    let id = 0;
+    const tick = () => {
+      setCurrentTime(v.currentTime);
+      id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [playing]);
 
   if (detections.length === 0) {
     return (

@@ -7,6 +7,8 @@ export const CORROSION_SAMPLE_INTERVAL_SEC = 0.25;
  * IoU threshold for per-timestamp NMS: if two boxes overlap at least this much, the lower-confidence
  * one is dropped (same frame only — does not merge across time).
  */
+export const CORROSION_NMS_IOU_THRESHOLD = 0.45;
+
 /**
  * IoU threshold for merging the same physical defect across frames: boxes linking into one
  * region (transitive overlap) become a single output row.
