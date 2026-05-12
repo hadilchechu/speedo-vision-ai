@@ -175,7 +175,7 @@ export async function exportCorrosionPredictionsPdf(project: Project): Promise<v
   const tableBody = detections.map((d, i) => [
     String(i + 1),
     formatTimestamp(d.timestamp),
-    `Frame_${Math.round(d.timestamp)}`,
+    `Image ${i + 1}`,
     d.confidence.toFixed(1),
     d.area_percent.toFixed(1),
     d.label,
@@ -183,7 +183,7 @@ export async function exportCorrosionPredictionsPdf(project: Project): Promise<v
 
   autoTable(doc, {
     startY: y,
-    head: [["#", "Timestamp", "Frame", "Score (%)", "Annotated area (%)", "Label"]],
+    head: [["#", "Timestamp", "Image", "Score (%)", "Annotated area (%)", "Label"]],
     body: tableBody.length ? tableBody : [["—", "—", "—", "—", "—", "No detections"]],
     theme: "striped",
     headStyles: { fillColor: [46, 134, 171], textColor: 255, fontStyle: "bold" },
@@ -255,7 +255,7 @@ export async function exportCorrosionPredictionsPdf(project: Project): Promise<v
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     const lines = [
-      `Name: Frame_${Math.round(d.timestamp)}`,
+      `Name: Image ${i + 1}`,
       `Timestamp: ${formatTimestamp(d.timestamp)}`,
       `Created on: ${project.createdAt}`,
       `Prediction score: ${d.confidence.toFixed(1)}% · Annotated area: ${d.area_percent.toFixed(1)}%`,
@@ -280,4 +280,91 @@ export async function exportCorrosionPredictionsPdf(project: Project): Promise<v
   video.load();
 
   doc.save(`${safeFileSlug(project.name)}_predictions.pdf`);
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const DOWNLOAD_BURST_MS = 280;
+
+async function pause(ms: number): Promise<void> {
+  await new Promise<void>((r) => setTimeout(r, ms));
+}
+
+/**
+ * Saves one original + one annotated JPEG per detection (named Image_1_original.jpg, etc.).
+ */
+export async function exportCorrosionDetectionsImages(project: Project): Promise<void> {
+  const detections = project.detections;
+  if (detections.length === 0) {
+    throw new Error("No detections to export as images.");
+  }
+
+  const video = await loadVideo(project.videoURL);
+  const canvas = document.createElement("canvas");
+  canvas.width = THUMB_W;
+  canvas.height = THUMB_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    video.removeAttribute("src");
+    video.load();
+    throw new Error("Canvas is not available in this browser.");
+  }
+
+  try {
+    for (let i = 0; i < detections.length; i++) {
+      const d = detections[i]!;
+      await seekVideo(video, d.timestamp);
+      await pause(0);
+
+      await new Promise<void>((resolve, reject) => {
+        if (!paintSnapshot(ctx, video, THUMB_W, THUMB_H, d.box, "original")) {
+          reject(new Error(`Could not capture frame for Image ${i + 1}.`));
+          return;
+        }
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Could not encode image."));
+              return;
+            }
+            downloadBlob(blob, `Image_${i + 1}_original.jpg`);
+            resolve();
+          },
+          "image/jpeg",
+          0.92,
+        );
+      });
+      await pause(DOWNLOAD_BURST_MS);
+
+      await new Promise<void>((resolve, reject) => {
+        paintSnapshot(ctx, video, THUMB_W, THUMB_H, d.box, "annotated");
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Could not encode annotated image."));
+              return;
+            }
+            downloadBlob(blob, `Image_${i + 1}_annotated.jpg`);
+            resolve();
+          },
+          "image/jpeg",
+          0.92,
+        );
+      });
+      await pause(DOWNLOAD_BURST_MS);
+    }
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+  }
 }

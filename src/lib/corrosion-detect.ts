@@ -1,7 +1,7 @@
 import type { Detection } from "./projects-store";
 
 /** Seconds between sampled frames for corrosion inference (smaller = denser timeline, more API calls). */
-export const CORROSION_SAMPLE_INTERVAL_SEC = 0.25;
+export const CORROSION_SAMPLE_INTERVAL_SEC = 2;
 
 /**
  * IoU threshold for per-timestamp NMS: if two boxes overlap at least this much, the lower-confidence

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Download, Trash2 } from "lucide-react";
+import { Film, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Project } from "@/lib/projects-store";
 import { projectsStore } from "@/lib/projects-store";
@@ -48,22 +48,13 @@ export function ProjectToolbar({ project }: { project: Project }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => downloadProjectManifest(project)}
-        className="inline-flex items-center gap-2 border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF]"
-        style={{ borderRadius: 0 }}
-      >
-        <Download className="h-4 w-4" />
-        Export JSON
-      </button>
       <a
         href={project.videoURL}
         download={videoName}
         className="inline-flex items-center gap-2 border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF]"
         style={{ borderRadius: 0 }}
       >
-        <Download className="h-4 w-4" />
+        <Film className="h-4 w-4" />
         Download video
       </a>
       <button

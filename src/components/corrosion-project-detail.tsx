@@ -12,19 +12,26 @@ import {
   Gauge,
   Crosshair,
   MoreHorizontal,
-  Pencil,
   Maximize,
+  Download,
+  Image,
+  Braces,
+  Check,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
+import { downloadProjectManifest } from "@/components/cloud-project-actions";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
-import { exportCorrosionPredictionsPdf } from "@/lib/corrosion-pdf-export";
+import {
+  exportCorrosionPredictionsPdf,
+  exportCorrosionDetectionsImages,
+} from "@/lib/corrosion-pdf-export";
 import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
 
-type TimelineDetection = Detection & { id: number; status: ReviewStatus; labelOverride?: string };
+type TimelineDetection = Detection & { id: number; status: ReviewStatus };
 
 export function CorrosionProjectDetail({
   project,
@@ -36,8 +43,8 @@ export function CorrosionProjectDetail({
   defaultReviewStatus?: Extract<ReviewStatus, "pending" | "confirmed">;
   headerExtra?: ReactNode;
 }) {
-  const tabs = ["Details", "Timeline", "Predictions"];
-  const [active, setActive] = useState("Details");
+  const tabs = ["Timeline", "Predictions", "Details"];
+  const [active, setActive] = useState("Timeline");
   const [uiDuration, setUiDuration] = useState(project.duration);
 
   useEffect(() => {
@@ -48,14 +55,17 @@ export function CorrosionProjectDetail({
 
   return (
     <AppShell>
-      <div className="mb-2 flex items-start justify-between gap-4">
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{project.name}</h1>
           <div className="mt-1 text-sm text-gray-500">
             Corrosion Detection — Video · {project.createdAt}
           </div>
         </div>
-        {headerExtra}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {headerExtra}
+          {active === "Timeline" ? <TimelineExportMenu project={displayProject} /> : null}
+        </div>
       </div>
       <div className="mb-6 mt-4 border-b border-[#E5E7EB]">
         <div className="flex gap-6">
@@ -241,6 +251,72 @@ function DetailsTab({ project }: { project: Project }) {
   );
 }
 
+function TimelineExportMenu({ project }: { project: Project }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-2 border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF] disabled:opacity-60"
+        style={{ borderRadius: 0 }}
+      >
+        <Download className="h-4 w-4" />
+        Export
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 min-w-[216px] rounded-md border border-[#E5E7EB] bg-white py-1 shadow-md">
+          <button
+            type="button"
+            disabled={busy}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
+            onClick={async () => {
+              setOpen(false);
+              setBusy(true);
+              try {
+                await exportCorrosionDetectionsImages(project);
+                toast.success("Images downloaded.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Could not export images.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Image className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
+            Export as Images
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50"
+            onClick={() => {
+              setOpen(false);
+              downloadProjectManifest(project);
+              toast.success("JSON downloaded.");
+            }}
+          >
+            <Braces className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
+            Export as JSON
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TimelineTab({
   project,
   defaultReviewStatus,
@@ -258,7 +334,6 @@ function TimelineTab({
       project.detections.map((d, i) => ({ id: i, timestamp: d.timestamp })),
     ),
   );
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -281,8 +356,22 @@ function TimelineTab({
 
   const updateStatus = (id: number, status: ReviewStatus) =>
     setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, status } : d)));
-  const updateLabel = (id: number, label: string) =>
-    setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, labelOverride: label } : d)));
+
+  const onConfirmCard = (id: number, status: ReviewStatus) => {
+    if (status === "confirmed" || status === "dismissed") {
+      updateStatus(id, "pending");
+      return;
+    }
+    updateStatus(id, "confirmed");
+  };
+
+  const onDismissCard = (id: number, status: ReviewStatus) => {
+    if (status === "dismissed") {
+      updateStatus(id, "pending");
+      return;
+    }
+    updateStatus(id, "dismissed");
+  };
 
   const seekTo = (t: number) => {
     const v = videoRef.current;
@@ -506,87 +595,86 @@ function TimelineTab({
             {pending} pending
           </div>
           <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
-            {detections.map((d) => (
-              <div
-                key={d.id}
-                onClick={() => {
-                  setSelectedId(d.id);
-                  seekTo(d.timestamp);
-                }}
-                className={`cursor-pointer rounded-md border p-3 transition ${
-                  selectedId === d.id
-                    ? "border-[#2E86AB] bg-[#EEF2FF]"
-                    : "border-[#E5E7EB] hover:bg-gray-50"
-                }`}
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatTimestamp(d.timestamp)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs capitalize text-gray-500">{d.status}</span>
+            {detections.map((d, imageIndex) => {
+              const imageLabel = `Image ${imageIndex + 1}`;
+              const isDismissed = d.status === "dismissed";
+              const isConfirmed = d.status === "confirmed";
+              const selected = selectedId === d.id;
+              const cardShell = [
+                "cursor-pointer rounded-md p-3 transition",
+                isDismissed ? "opacity-60 border border-[#E5E7EB] border-l-4 border-l-gray-400" : "",
+                !isDismissed && selected ? "border border-[#2E86AB] bg-[#EEF2FF]" : "",
+                !isDismissed && !selected ? "border border-[#E5E7EB] hover:bg-gray-50" : "",
+                isDismissed && selected ? "ring-2 ring-[#2E86AB] ring-offset-0 bg-[#EEF2FF]/50" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              const confirmClasses = isConfirmed
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 border border-[#2E9E8F] bg-[#2E9E8F] px-2 py-2 text-xs font-semibold text-white transition hover:bg-[#268579]"
+                : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-[#2E9E8F] bg-white px-2 py-2 text-xs font-semibold text-[#2E9E8F] transition hover:bg-[#2E9E8F]/10";
+
+              const dismissClasses = isDismissed
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-500 bg-gray-500 px-2 py-2 text-xs font-semibold text-white transition hover:bg-gray-600"
+                : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100";
+
+              return (
+                <div
+                  key={d.id}
+                  onClick={() => {
+                    setSelectedId(d.id);
+                    seekTo(d.timestamp);
+                  }}
+                  className={cardShell}
+                >
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900">{imageLabel}</div>
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        {formatTimestamp(d.timestamp)}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium capitalize text-gray-600">
+                      {d.status}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-semibold text-[#2E86AB]">
+                    <span>Accuracy {d.confidence.toFixed(1)}%</span>
+                    <span className="font-normal text-gray-300">|</span>
+                    <span>Area {d.area_percent.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex w-full gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingId(editingId === d.id ? null : d.id);
+                        onConfirmCard(d.id, d.status);
                       }}
-                      className="text-gray-400 hover:text-[#2E86AB]"
+                      className={confirmClasses}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      {isConfirmed ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                          Confirmed
+                        </>
+                      ) : (
+                        "Confirm"
+                      )}
                     </button>
-                  </div>
-                </div>
-                {editingId === d.id ? (
-                  <div className="mb-2 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      defaultValue={d.labelOverride ?? d.label}
-                      onChange={(e) => updateLabel(d.id, e.target.value)}
-                      className="h-7 flex-1 rounded border border-[#E5E7EB] px-2 text-sm focus:border-[#2E86AB] focus:outline-none"
-                    />
                     <button
                       type="button"
-                      onClick={() => setEditingId(null)}
-                      className="h-7 bg-[#2E9E8F] px-3 text-xs font-semibold uppercase text-white hover:bg-[#268579]"
-                      style={{ borderRadius: 0 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDismissCard(d.id, d.status);
+                      }}
+                      className={dismissClasses}
                     >
-                      Save
+                      {isDismissed ? "Dismissed" : "Dismiss"}
                     </button>
                   </div>
-                ) : (
-                  <div className="mb-2 text-sm text-gray-700">{d.labelOverride ?? d.label}</div>
-                )}
-                <div className="mb-3 flex gap-4 text-xs">
-                  <span className="font-semibold text-[#2E86AB]">{d.confidence.toFixed(1)}%</span>
-                  <span className="font-semibold text-[#2E86AB]">
-                    Area {d.area_percent.toFixed(1)}%
-                  </span>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateStatus(d.id, "confirmed");
-                    }}
-                    className="flex-1 border border-[#2E9E8F] px-2 py-1 text-xs font-medium text-[#2E9E8F] transition hover:bg-[#2E9E8F] hover:text-white"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateStatus(d.id, "dismissed");
-                    }}
-                    className="flex-1 border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -706,7 +794,7 @@ function PredictionsTab({ project }: { project: Project }) {
             <div className="space-y-1.5 text-sm">
               <div>
                 <span className="text-gray-500">Name: </span>
-                <span className="font-semibold text-gray-900">Frame_{Math.round(d.timestamp)}</span>
+                <span className="font-semibold text-gray-900">Image {i + 1}</span>
               </div>
               <div>
                 <span className="text-gray-500">Created On: </span>

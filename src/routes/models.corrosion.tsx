@@ -33,6 +33,10 @@ export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
 });
 
+/** Shared layout for Projects toolbar actions (Import + New Project). */
+const projectsToolbarBtn =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
+
 /** Parses Export JSON (same shape as `downloadProjectManifest`) and adds the project to this session. */
 function importManifestIntoSession(manifestJson: string, videoFile: File): void {
   let parsed: unknown;
@@ -88,18 +92,16 @@ function CorrosionModelPage() {
               <button
                 type="button"
                 onClick={() => setOpenImport(true)}
-                className="px-4 py-2 bg-white border border-[#2E86AB] text-[#2E86AB] text-xs font-semibold uppercase tracking-wide hover:bg-[#EEF2FF] transition-colors"
+                className={`${projectsToolbarBtn} border-[#2E86AB] bg-white text-[#2E86AB] hover:bg-[#EEF2FF]`}
                 style={{ borderRadius: 0 }}
               >
-                <span className="inline-flex items-center gap-1.5">
-                  <FileDown className="w-3.5 h-3.5" />
-                  Import
-                </span>
+                <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+                Import
               </button>
               <button
                 type="button"
                 onClick={() => setOpenNew(true)}
-                className="px-4 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] transition-colors"
+                className={`${projectsToolbarBtn} border-[#2E9E8F] bg-[#2E9E8F] text-white hover:bg-[#268579] hover:border-[#268579]`}
                 style={{ borderRadius: 0 }}
               >
                 + New Project
