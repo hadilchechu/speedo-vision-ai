@@ -602,20 +602,15 @@ function TimelineTab({
               const selected = selectedId === d.id;
               const cardShell = [
                 "cursor-pointer rounded-md p-3 transition",
-                isDismissed ? "opacity-60 border border-[#E5E7EB] border-l-4 border-l-gray-400" : "",
-                !isDismissed && selected ? "border border-[#2E86AB] bg-[#EEF2FF]" : "",
-                !isDismissed && !selected ? "border border-[#E5E7EB] hover:bg-gray-50" : "",
-                isDismissed && selected ? "ring-2 ring-[#2E86AB] ring-offset-0 bg-[#EEF2FF]/50" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
+                selected ? "border border-[#2E86AB] bg-[#EEF2FF]" : "border border-[#E5E7EB] hover:bg-gray-50",
+              ].join(" ");
 
               const confirmClasses = isConfirmed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 border border-[#2E9E8F] bg-[#2E9E8F] px-2 py-2 text-xs font-semibold text-white transition hover:bg-[#268579]"
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 border border-[#b8e4d9] bg-[#f0faf8] px-2 py-2 text-xs font-semibold text-[#1f6f63] transition hover:border-[#9dd9cb] hover:bg-[#e8f6f3]"
                 : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-[#2E9E8F] bg-white px-2 py-2 text-xs font-semibold text-[#2E9E8F] transition hover:bg-[#2E9E8F]/10";
 
               const dismissClasses = isDismissed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-500 bg-gray-500 px-2 py-2 text-xs font-semibold text-white transition hover:bg-gray-600"
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-200/90 bg-gray-100 px-2 py-2 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:bg-gray-200/50"
                 : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100";
 
               return (
@@ -648,6 +643,8 @@ function TimelineTab({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setSelectedId(d.id);
+                        seekTo(d.timestamp);
                         onConfirmCard(d.id, d.status);
                       }}
                       className={confirmClasses}
@@ -665,6 +662,8 @@ function TimelineTab({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
+                        setSelectedId(d.id);
+                        seekTo(d.timestamp);
                         onDismissCard(d.id, d.status);
                       }}
                       className={dismissClasses}

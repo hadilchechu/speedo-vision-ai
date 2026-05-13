@@ -10,6 +10,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
+import { InteractiveDotGrid } from "@/components/interactive-dot-grid";
 
 const navItems = [
   { label: "Models", icon: Boxes, to: "/" },
@@ -24,8 +25,8 @@ function Sidebar() {
       className="fixed inset-y-0 left-0 w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
-      <div className="h-16 flex items-center px-5 border-b border-[#E5E7EB]">
-        <img src={logoUrl} alt="Speedo.ai" className="h-8 w-auto" />
+      <div className="flex h-16 items-center border-b border-[#E5E7EB] px-5 pt-5">
+        <img src={logoUrl} alt="Speedo.ai" className="h-14 w-auto" />
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
@@ -61,10 +62,11 @@ function TopBar() {
   } else if (path === "/team" || path === "/settings") {
     back = { to: "/", label: "Models" };
   }
+  const modelsHomeTitle = path === "/" && !back;
   return (
     <div className="flex items-center justify-between h-16 px-8 bg-white border-b border-[#E5E7EB]">
       <div>
-        {back && (
+        {back ? (
           <Link
             to={back.to}
             className="inline-flex items-center gap-1.5 text-sm text-[#2E86AB] hover:underline"
@@ -72,7 +74,9 @@ function TopBar() {
             <ArrowLeft className="w-4 h-4" />
             {back.label}
           </Link>
-        )}
+        ) : modelsHomeTitle ? (
+          <h1 className="text-lg font-semibold text-gray-900">Models</h1>
+        ) : null}
       </div>
       <div className="relative">
         <button onClick={() => setOpen(!open)} className="flex items-center gap-3 text-sm">
@@ -140,9 +144,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F0F2F7]" style={{ fontFamily: "Inter, sans-serif" }}>
       <Sidebar />
-      <div className="ml-[220px]">
-        <TopBar />
-        <main className="p-8">{children}</main>
+      <div className="relative ml-[220px] min-h-screen">
+        <InteractiveDotGrid />
+        <div className="relative z-10 flex min-h-screen flex-col">
+          <TopBar />
+          <main className="flex-1 p-8">{children}</main>
+        </div>
       </div>
       <ChatBubble />
     </div>
