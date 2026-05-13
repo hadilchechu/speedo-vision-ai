@@ -35,7 +35,7 @@ export const Route = createFileRoute("/models/corrosion")({
 
 /** Shared layout for Projects toolbar actions (Import + New Project). */
 const projectsToolbarBtn =
-  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
 
 /** Parses Export JSON (same shape as `downloadProjectManifest`) and adds the project to this session. */
 function importManifestIntoSession(manifestJson: string, videoFile: File): void {
@@ -93,7 +93,6 @@ function CorrosionModelPage() {
                 type="button"
                 onClick={() => setOpenImport(true)}
                 className={`${projectsToolbarBtn} border-[#2E86AB] bg-white text-[#2E86AB] hover:bg-[#EEF2FF]`}
-                style={{ borderRadius: 0 }}
               >
                 <FileDown className="h-4 w-4 shrink-0" aria-hidden />
                 Import
@@ -102,7 +101,6 @@ function CorrosionModelPage() {
                 type="button"
                 onClick={() => setOpenNew(true)}
                 className={`${projectsToolbarBtn} border-[#2E9E8F] bg-[#2E9E8F] text-white hover:bg-[#268579] hover:border-[#268579]`}
-                style={{ borderRadius: 0 }}
               >
                 + New Project
               </button>
@@ -244,7 +242,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+          className="absolute top-4 right-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -276,8 +274,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase"
-            style={{ borderRadius: 0 }}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold uppercase text-gray-700"
           >
             Cancel
           </button>
@@ -285,8 +282,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
             type="button"
             disabled={busy}
             onClick={() => void submit()}
-            className="px-4 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase disabled:opacity-50"
-            style={{ borderRadius: 0 }}
+            className="rounded-lg bg-[#2E9E8F] px-4 py-2 text-xs font-semibold uppercase text-white disabled:opacity-50"
           >
             {busy ? "Importing…" : "Import"}
           </button>
@@ -398,7 +394,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
       >
         <button
           onClick={processing ? undefined : onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+          className="absolute top-4 right-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -422,8 +418,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={processing}
-              className="px-5 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579] disabled:opacity-50"
-              style={{ borderRadius: 0 }}
+              className="rounded-lg bg-[#2E9E8F] px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-[#268579] disabled:opacity-50"
             >
               Browse Files
             </button>
@@ -495,20 +490,18 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={onClose}
               disabled={processing}
-              className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase tracking-wide hover:bg-gray-50 disabled:opacity-50"
-              style={{ borderRadius: 0 }}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={startInspection}
               disabled={!ready}
-              className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              className={`rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
                 ready
                   ? "bg-[#2E9E8F] text-white hover:bg-[#268579]"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "cursor-not-allowed bg-gray-200 text-gray-400"
               }`}
-              style={{ borderRadius: 0 }}
             >
               {processing ? "Processing..." : "Start Inspection"}
             </button>

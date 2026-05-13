@@ -73,10 +73,10 @@ export function CorrosionProjectDetail({
             <button
               key={t}
               onClick={() => setActive(t)}
-              className={`border-b-2 pb-3 text-sm font-medium transition-colors -mb-px ${
+              className={`rounded-md px-1 pb-3 text-sm font-medium transition-colors -mb-px ${
                 active === t
-                  ? "border-[#2E86AB] text-[#2E86AB]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-b-2 border-[#2E86AB] text-[#2E86AB]"
+                  : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
               {t}
@@ -138,7 +138,7 @@ function formatDurationLong(secs: number) {
   return `${m} min ${s} sec`;
 }
 
-/** Seconds: overlays match detections whose timestamp is within this distance of the playhead. */
+/** Seconds: closest detection to playhead is shown when within this distance (playback + paused overlay). */
 const OVERLAY_TIME_WINDOW_SEC = 0.45;
 
 /** Closest detection to the playhead (for list selection while playing). */
@@ -162,54 +162,6 @@ function detectionsNearPlayhead(
       Math.abs(a.timestamp - t) - Math.abs(b.timestamp - t) || a.id - b.id,
   );
   return near;
-}
-
-function iouTimelineBox(
-  a: { x: number; y: number; width: number; height: number },
-  b: { x: number; y: number; width: number; height: number },
-): number {
-  const ax2 = a.x + a.width;
-  const ay2 = a.y + a.height;
-  const bx2 = b.x + b.width;
-  const by2 = b.y + b.height;
-  const ix1 = Math.max(a.x, b.x);
-  const iy1 = Math.max(a.y, b.y);
-  const ix2 = Math.min(ax2, bx2);
-  const iy2 = Math.min(ay2, by2);
-  const iw = Math.max(0, ix2 - ix1);
-  const ih = Math.max(0, iy2 - iy1);
-  const inter = iw * ih;
-  const areaA = Math.max(0, a.width) * Math.max(0, a.height);
-  const areaB = Math.max(0, b.width) * Math.max(0, b.height);
-  const union = areaA + areaB - inter;
-  return union > 0 ? inter / union : 0;
-}
-
-/** IoU for overlay dedupe: same physical patch repeated every sample collapses to one box. */
-const OVERLAY_PLAYBACK_SPATIAL_IOU = 0.38;
-/** Small lookahead so the last sampled frame still paints before playhead passes it. */
-const OVERLAY_PLAYBACK_LOOKAHEAD_SEC = 0.2;
-
-/**
- * While playing: show every *distinct* defect seen so far (timestamp ≤ playhead), not only the
- * narrow ±0.45s slice (which misses neighbours at 0.25s spacing and stacks identical hood boxes).
- */
-function overlayDetectionsWhilePlaying(
-  detections: TimelineDetection[],
-  currentTime: number,
-): TimelineDetection[] {
-  const tMax = currentTime + OVERLAY_PLAYBACK_LOOKAHEAD_SEC;
-  const pool = detections
-    .filter((d) => d.timestamp <= tMax)
-    .sort((a, b) => b.timestamp - a.timestamp || b.confidence - a.confidence);
-  const kept: TimelineDetection[] = [];
-  for (const d of pool) {
-    if (!kept.some((k) => iouTimelineBox(k.box, d.box) >= OVERLAY_PLAYBACK_SPATIAL_IOU)) {
-      kept.push(d);
-    }
-  }
-  kept.sort((a, b) => a.timestamp - b.timestamp || a.id - b.id);
-  return kept;
 }
 
 function firstDetectionIdByTimestamp(
@@ -271,18 +223,17 @@ function TimelineExportMenu({ project }: { project: Project }) {
         type="button"
         disabled={busy}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF] disabled:opacity-60"
-        style={{ borderRadius: 0 }}
+        className="inline-flex items-center gap-2 rounded-lg border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF] disabled:opacity-60"
       >
         <Download className="h-4 w-4" />
         Export
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 min-w-[216px] rounded-md border border-[#E5E7EB] bg-white py-1 shadow-md">
+        <div className="absolute right-0 top-full z-20 mt-1 min-w-[216px] rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-md">
           <button
             type="button"
             disabled={busy}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
             onClick={async () => {
               setOpen(false);
               setBusy(true);
@@ -301,7 +252,7 @@ function TimelineExportMenu({ project }: { project: Project }) {
           </button>
           <button
             type="button"
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50"
             onClick={() => {
               setOpen(false);
               downloadProjectManifest(project);
@@ -345,8 +296,11 @@ function TimelineTab({
   const [mediaDurationSec, setMediaDurationSec] = useState<number | null>(null);
 
   const selected = detections.find((d) => d.id === selectedId) || null;
+  const primaryAtPlayhead = primaryDetectionAtPlayhead(detections, currentTime);
   const overlayDetections = playing
-    ? overlayDetectionsWhilePlaying(detections, currentTime)
+    ? primaryAtPlayhead
+      ? [primaryAtPlayhead]
+      : []
     : selected && Math.abs(currentTime - selected.timestamp) <= OVERLAY_TIME_WINDOW_SEC
       ? [selected]
       : [];
@@ -516,10 +470,7 @@ function TimelineTab({
                   zIndex: 10 + idx,
                 }}
               >
-                <span
-                  className="absolute left-0 rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white shadow"
-                  style={{ top: `${-22 - Math.min(idx, 5) * 16}px` }}
-                >
+                <span className="absolute left-0 top-0 z-10 -mt-1 -translate-y-full whitespace-nowrap rounded-lg bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white shadow">
                   Corrosion — {d.confidence.toFixed(0)}%
                 </span>
               </div>
@@ -566,7 +517,7 @@ function TimelineTab({
             </div>
             <button
               type="button"
-              className="shrink-0 text-gray-500 hover:text-[#2E86AB]"
+              className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#2E86AB]"
               aria-label="Fullscreen"
             >
               <Maximize className="h-4 w-4" />
@@ -606,12 +557,12 @@ function TimelineTab({
               ].join(" ");
 
               const confirmClasses = isConfirmed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 border border-[#b8e4d9] bg-[#f0faf8] px-2 py-2 text-xs font-semibold text-[#1f6f63] transition hover:border-[#9dd9cb] hover:bg-[#e8f6f3]"
-                : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-[#2E9E8F] bg-white px-2 py-2 text-xs font-semibold text-[#2E9E8F] transition hover:bg-[#2E9E8F]/10";
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 rounded-lg border border-[#b8e4d9] bg-[#f0faf8] px-2 py-2 text-xs font-semibold text-[#1f6f63] transition hover:border-[#9dd9cb] hover:bg-[#e8f6f3]"
+                : "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-[#2E9E8F] bg-white px-2 py-2 text-xs font-semibold text-[#2E9E8F] transition hover:bg-[#2E9E8F]/10";
 
               const dismissClasses = isDismissed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-200/90 bg-gray-100 px-2 py-2 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:bg-gray-200/50"
-                : "flex-1 inline-flex min-h-[32px] items-center justify-center border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100";
+                ? "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-gray-200/90 bg-gray-100 px-2 py-2 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:bg-gray-200/50"
+                : "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100";
 
               return (
                 <div
@@ -738,7 +689,7 @@ function PredictionsTab({ project }: { project: Project }) {
           <select className="h-9 rounded-md border border-[#E5E7EB] bg-white px-3 text-sm text-gray-700">
             <option>Newest</option>
           </select>
-          <div className="ml-2 flex items-center rounded-md border border-[#E5E7EB] bg-white">
+          <div className="ml-2 flex items-center overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
             <button type="button" className="border-r border-[#E5E7EB] p-2 text-[#2E86AB]">
               <Columns2 className="h-4 w-4" />
             </button>
@@ -776,8 +727,7 @@ function PredictionsTab({ project }: { project: Project }) {
                 setExportingPdf(false);
               }
             }}
-            className="border border-[#2E86AB] bg-[#2E86AB] px-4 py-2 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:bg-[#246d8c] disabled:cursor-not-allowed disabled:opacity-60"
-            style={{ borderRadius: 0 }}
+            className="rounded-lg border border-[#2E86AB] bg-[#2E86AB] px-4 py-2 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:bg-[#246d8c] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {exportingPdf ? "Exporting…" : "Export"}
           </button>

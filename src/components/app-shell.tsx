@@ -79,7 +79,10 @@ function TopBar() {
         ) : null}
       </div>
       <div className="relative">
-        <button onClick={() => setOpen(!open)} className="flex items-center gap-3 text-sm">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-gray-50"
+        >
           <img
             src="https://i.pravatar.cc/72?img=12"
             alt="John Stephan"
@@ -99,14 +102,14 @@ function TopBar() {
                 toast.info("Profile — coming soon");
                 setOpen(false);
               }}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              className="mx-1 block w-full rounded-md px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               Profile
             </button>
             <Link
               to="/settings"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="mx-1 block rounded-md px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               Account settings
             </Link>
@@ -116,7 +119,7 @@ function TopBar() {
                 toast.info("Sign out — coming soon");
                 setOpen(false);
               }}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              className="mx-1 block w-full rounded-md px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               Sign out
             </button>

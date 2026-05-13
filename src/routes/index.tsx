@@ -36,7 +36,7 @@ const models: Model[] = [
 
 function FilterSelect({ label }: { label: string }) {
   return (
-    <button className="h-9 px-3 text-sm border border-[#E5E7EB] bg-white rounded-md text-gray-700 flex items-center gap-2 hover:border-[#2E86AB]">
+    <button className="flex h-9 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-gray-700 hover:border-[#2E86AB]">
       {label}
       <ChevronDown className="w-4 h-4 text-gray-500" />
     </button>

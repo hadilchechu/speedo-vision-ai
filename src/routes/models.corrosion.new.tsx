@@ -37,8 +37,7 @@ function NewProjectPage() {
           <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 2GB</div>
           <button
             onClick={handlePick}
-            className="px-5 py-2 bg-[#2E9E8F] text-white text-xs font-semibold uppercase tracking-wide hover:bg-[#268579]"
-            style={{ borderRadius: 0 }}
+            className="rounded-lg bg-[#2E9E8F] px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-[#268579]"
           >
             Browse Files
           </button>
@@ -88,20 +87,18 @@ function NewProjectPage() {
         <div className="flex items-center justify-end gap-2 mt-8">
           <button
             onClick={() => navigate({ to: "/models/corrosion" })}
-            className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-semibold uppercase tracking-wide hover:bg-gray-50"
-            style={{ borderRadius: 0 }}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             disabled={!ready}
             onClick={() => navigate({ to: "/models/corrosion/pipeline-inspection-01" })}
-            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+            className={`rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
               ready
                 ? "bg-[#2E9E8F] text-white hover:bg-[#268579]"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "cursor-not-allowed bg-gray-200 text-gray-400"
             }`}
-            style={{ borderRadius: 0 }}
           >
             Start Inspection
           </button>

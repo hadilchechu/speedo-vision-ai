@@ -14,8 +14,7 @@ function FeaturedDemoPage() {
       headerExtra={
         <button
           type="button"
-          className="border border-[#2E9E8F] bg-white px-5 py-2.5 text-xs font-semibold tracking-wide text-[#2E9E8F] uppercase transition-colors hover:bg-[#EEF2FF]"
-          style={{ borderRadius: 0 }}
+          className="rounded-lg border border-[#2E9E8F] bg-white px-5 py-2.5 text-xs font-semibold tracking-wide text-[#2E9E8F] uppercase transition-colors hover:bg-[#EEF2FF]"
         >
           Reinspect
         </button>

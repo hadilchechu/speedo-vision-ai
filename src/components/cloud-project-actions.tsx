@@ -51,8 +51,7 @@ export function ProjectToolbar({ project }: { project: Project }) {
       <a
         href={project.videoURL}
         download={videoName}
-        className="inline-flex items-center gap-2 border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF]"
-        style={{ borderRadius: 0 }}
+        className="inline-flex items-center gap-2 rounded-lg border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF]"
       >
         <Film className="h-4 w-4" />
         Download video
@@ -60,8 +59,7 @@ export function ProjectToolbar({ project }: { project: Project }) {
       <button
         type="button"
         onClick={() => void onRemove()}
-        className="inline-flex items-center gap-2 border border-red-300 bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-red-700 uppercase transition-colors hover:bg-red-50"
-        style={{ borderRadius: 0 }}
+        className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-red-700 uppercase transition-colors hover:bg-red-50"
       >
         <Trash2 className="h-4 w-4" />
         Remove

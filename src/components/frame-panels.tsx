@@ -95,7 +95,7 @@ export function InspectionSummary({ children }: { children: React.ReactNode }) {
     <div className="relative bg-[#EEF6FF] border-l-[3px] border-[#2E86AB] rounded-r-md">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+        className="flex w-full items-center justify-between gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-white/60"
       >
         <div className="flex items-center gap-2">
           <h4 className="text-sm font-bold text-gray-900">AI Inspection Summary</h4>
