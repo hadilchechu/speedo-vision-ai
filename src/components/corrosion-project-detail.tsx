@@ -16,7 +16,7 @@ import {
   Download,
   Image,
   Braces,
-  Check,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -312,18 +312,12 @@ function TimelineTab({
     setDetections((arr) => arr.map((d) => (d.id === id ? { ...d, status } : d)));
 
   const onConfirmCard = (id: number, status: ReviewStatus) => {
-    if (status === "confirmed" || status === "dismissed") {
-      updateStatus(id, "pending");
-      return;
-    }
+    if (status === "confirmed") return;
     updateStatus(id, "confirmed");
   };
 
   const onDismissCard = (id: number, status: ReviewStatus) => {
-    if (status === "dismissed") {
-      updateStatus(id, "pending");
-      return;
-    }
+    if (status === "dismissed") return;
     updateStatus(id, "dismissed");
   };
 
@@ -556,13 +550,36 @@ function TimelineTab({
                 selected ? "border border-[#2E86AB] bg-[#EEF2FF]" : "border border-[#E5E7EB] hover:bg-gray-50",
               ].join(" ");
 
+              const actionBase =
+                "inline-flex min-h-[32px] min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border py-2 text-xs font-semibold transition-[flex-basis,flex-grow,opacity,padding,border-color,background-color,color] duration-200 ease-out";
+              const actionHidden =
+                "pointer-events-none flex-[0_1_0px] border-transparent px-0 opacity-0";
+              const actionIdle = "flex-[1_1_0%] bg-white px-2";
+              const actionActive = "flex-[1_1_0%] px-2 opacity-100";
+
               const confirmClasses = isConfirmed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center gap-1 rounded-lg border border-[#b8e4d9] bg-[#f0faf8] px-2 py-2 text-xs font-semibold text-[#1f6f63] transition hover:border-[#9dd9cb] hover:bg-[#e8f6f3]"
-                : "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-[#2E9E8F] bg-white px-2 py-2 text-xs font-semibold text-[#2E9E8F] transition hover:bg-[#2E9E8F]/10";
+                ? `${actionBase} ${actionActive} border-[#7bcbbc] bg-[#e8f6f3] text-[#1f6f63] hover:border-[#62bba9] hover:bg-[#dcf0ec]`
+                : isDismissed
+                  ? `${actionBase} ${actionHidden}`
+                  : `${actionBase} ${actionIdle} border-gray-300 text-gray-700 hover:border-[#2E9E8F] hover:bg-[#2E9E8F]/10 hover:text-[#2E9E8F]`;
 
               const dismissClasses = isDismissed
-                ? "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-gray-200/90 bg-gray-100 px-2 py-2 text-xs font-semibold text-gray-500 transition hover:border-gray-300 hover:bg-gray-200/50"
-                : "flex-1 inline-flex min-h-[32px] items-center justify-center rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-100";
+                ? `${actionBase} ${actionActive} border-gray-300 bg-gray-100 text-gray-700 hover:border-gray-400 hover:bg-gray-200/70`
+                : isConfirmed
+                  ? `${actionBase} ${actionHidden}`
+                  : `${actionBase} ${actionIdle} border-gray-300 text-gray-700 hover:bg-gray-100`;
+
+              const actionGroupClasses = [
+                "flex min-w-0 flex-1 transition-[gap] duration-200 ease-out",
+                d.status === "pending" ? "gap-2" : "gap-0",
+              ].join(" ");
+
+              const resetClasses = [
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 transition-[opacity,transform,border-color,background-color,color] duration-200 ease-out hover:bg-gray-100 hover:text-gray-700",
+                d.status === "pending"
+                  ? "pointer-events-none scale-95 opacity-0"
+                  : "scale-100 opacity-100",
+              ].join(" ");
 
               return (
                 <div
@@ -589,37 +606,50 @@ function TimelineTab({
                     <span className="font-normal text-gray-300">|</span>
                     <span>Area {d.area_percent.toFixed(1)}%</span>
                   </div>
-                  <div className="flex w-full gap-2">
+                  <div className="flex w-full items-center gap-2">
+                    <div className={actionGroupClasses}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(d.id);
+                          seekTo(d.timestamp);
+                          onConfirmCard(d.id, d.status);
+                        }}
+                        className={confirmClasses}
+                        aria-hidden={isDismissed}
+                        tabIndex={isDismissed ? -1 : 0}
+                      >
+                        {isConfirmed ? "Confirmed" : "Confirm"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(d.id);
+                          seekTo(d.timestamp);
+                          onDismissCard(d.id, d.status);
+                        }}
+                        className={dismissClasses}
+                        aria-hidden={isConfirmed}
+                        tabIndex={isConfirmed ? -1 : 0}
+                      >
+                        {isDismissed ? "Dismissed" : "Dismiss"}
+                      </button>
+                    </div>
                     <button
                       type="button"
+                      aria-label="Reset detection action"
+                      tabIndex={d.status === "pending" ? -1 : 0}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedId(d.id);
                         seekTo(d.timestamp);
-                        onConfirmCard(d.id, d.status);
+                        updateStatus(d.id, "pending");
                       }}
-                      className={confirmClasses}
+                      className={resetClasses}
                     >
-                      {isConfirmed ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
-                          Confirmed
-                        </>
-                      ) : (
-                        "Confirm"
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedId(d.id);
-                        seekTo(d.timestamp);
-                        onDismissCard(d.id, d.status);
-                      }}
-                      className={dismissClasses}
-                    >
-                      {isDismissed ? "Dismissed" : "Dismiss"}
+                      <X className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
                 </div>
