@@ -34,7 +34,7 @@ export const projectsStore = {
     return projects;
   },
   add(p: Project) {
-    projects = [p, ...projects];
+    projects = [p, ...projects.filter((project) => project.id !== p.id)];
     emit();
   },
   get(id: string) {

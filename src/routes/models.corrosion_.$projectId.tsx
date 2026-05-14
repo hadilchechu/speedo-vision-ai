@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { CorrosionProjectDetail } from "@/components/corrosion-project-detail";
-import { ProjectToolbar } from "@/components/cloud-project-actions";
 import { useProjects } from "@/lib/projects-store";
 
 export const Route = createFileRoute("/models/corrosion_/$projectId")({
@@ -24,7 +23,5 @@ function ProjectPage() {
     );
   }
 
-  return (
-    <CorrosionProjectDetail project={project} headerExtra={<ProjectToolbar project={project} />} />
-  );
+  return <CorrosionProjectDetail project={project} />;
 }

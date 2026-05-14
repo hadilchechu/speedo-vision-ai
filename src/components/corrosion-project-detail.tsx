@@ -4,29 +4,17 @@ import {
   AlertTriangle,
   Play,
   Pause,
-  Search,
-  LayoutGrid,
-  List,
-  Columns2,
   BarChart3,
   Gauge,
   Crosshair,
   MoreHorizontal,
   Maximize,
-  Download,
-  Image,
-  Braces,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AppShell } from "@/components/app-shell";
-import { downloadProjectManifest } from "@/components/cloud-project-actions";
+import { ProjectActionGroup } from "@/components/cloud-project-actions";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
-import {
-  exportCorrosionPredictionsPdf,
-  exportCorrosionDetectionsImages,
-} from "@/lib/corrosion-pdf-export";
 import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
@@ -36,20 +24,22 @@ type TimelineDetection = Detection & { id: number; status: ReviewStatus };
 export function CorrosionProjectDetail({
   project,
   defaultReviewStatus = "pending",
-  headerExtra,
 }: {
   project: Project;
   /** Featured demo uses confirmed rows for a finished-review look. */
   defaultReviewStatus?: Extract<ReviewStatus, "pending" | "confirmed">;
-  headerExtra?: ReactNode;
 }) {
   const tabs = ["Timeline", "Predictions", "Details"];
   const [active, setActive] = useState("Timeline");
   const [uiDuration, setUiDuration] = useState(project.duration);
+  const [detections, setDetections] = useState<TimelineDetection[]>(() =>
+    project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus })),
+  );
 
   useEffect(() => {
     setUiDuration(project.duration);
-  }, [project.id, project.duration]);
+    setDetections(project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus })));
+  }, [project.id, project.duration, project.detections, defaultReviewStatus]);
 
   const displayProject: Project = { ...project, duration: uiDuration || project.duration };
 
@@ -62,10 +52,7 @@ export function CorrosionProjectDetail({
             Corrosion Detection — Video · {project.createdAt}
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {headerExtra}
-          {active === "Timeline" ? <TimelineExportMenu project={displayProject} /> : null}
-        </div>
+        <ProjectActionGroup project={displayProject} detections={detections} activeTab={active} />
       </div>
       <div className="mb-6 mt-4 border-b border-[#E5E7EB]">
         <div className="flex gap-6">
@@ -89,7 +76,8 @@ export function CorrosionProjectDetail({
         <TimelineTab
           key={project.id}
           project={displayProject}
-          defaultReviewStatus={defaultReviewStatus}
+          detections={detections}
+          setDetections={setDetections}
           onDurationKnown={setUiDuration}
         />
       )}
@@ -203,83 +191,17 @@ function DetailsTab({ project }: { project: Project }) {
   );
 }
 
-function TimelineExportMenu({ project }: { project: Project }) {
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-lg border border-[#2E86AB] bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-[#2E86AB] uppercase transition-colors hover:bg-[#EEF2FF] disabled:opacity-60"
-      >
-        <Download className="h-4 w-4" />
-        Export
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 min-w-[216px] rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-md">
-          <button
-            type="button"
-            disabled={busy}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
-            onClick={async () => {
-              setOpen(false);
-              setBusy(true);
-              try {
-                await exportCorrosionDetectionsImages(project);
-                toast.success("Images downloaded.");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Could not export images.");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Image className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-            Export as Images
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50"
-            onClick={() => {
-              setOpen(false);
-              downloadProjectManifest(project);
-              toast.success("JSON downloaded.");
-            }}
-          >
-            <Braces className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-            Export as JSON
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TimelineTab({
   project,
-  defaultReviewStatus,
+  detections,
+  setDetections,
   onDurationKnown,
 }: {
   project: Project;
-  defaultReviewStatus: ReviewStatus;
+  detections: TimelineDetection[];
+  setDetections: Dispatch<SetStateAction<TimelineDetection[]>>;
   onDurationKnown: (seconds: number) => void;
 }) {
-  const [detections, setDetections] = useState<TimelineDetection[]>(() =>
-    project.detections.map((d, i) => ({ ...d, id: i, status: defaultReviewStatus })),
-  );
   const [selectedId, setSelectedId] = useState<number | null>(() =>
     firstDetectionIdByTimestamp(
       project.detections.map((d, i) => ({ id: i, timestamp: d.timestamp })),
@@ -693,7 +615,6 @@ function PredictionStatCard({
 }
 
 function PredictionsTab({ project }: { project: Project }) {
-  const [exportingPdf, setExportingPdf] = useState(false);
   const detections = project.detections;
   const avgScore = detections.length
     ? (detections.reduce((s, d) => s + d.confidence / 100, 0) / detections.length).toFixed(2)
@@ -709,59 +630,6 @@ function PredictionsTab({ project }: { project: Project }) {
         <PredictionStatCard icon={Crosshair} label="Mean Average Precision" value="0.8" />
         <PredictionStatCard icon={BarChart3} label="Average Annotated Area" value={avgArea} />
         <PredictionStatCard icon={MoreHorizontal} label="More Stats" clickable />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <select className="h-9 rounded-md border border-[#E5E7EB] bg-white px-3 text-sm text-gray-700">
-            <option>Prediction Time</option>
-          </select>
-          <select className="h-9 rounded-md border border-[#E5E7EB] bg-white px-3 text-sm text-gray-700">
-            <option>Newest</option>
-          </select>
-          <div className="ml-2 flex items-center overflow-hidden rounded-lg border border-[#E5E7EB] bg-white">
-            <button type="button" className="border-r border-[#E5E7EB] p-2 text-[#2E86AB]">
-              <Columns2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="border-r border-[#E5E7EB] p-2 text-gray-500 hover:text-[#2E86AB]"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button type="button" className="p-2 text-gray-500 hover:text-[#2E86AB]">
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search"
-              className="h-9 w-56 rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-sm focus:border-[#2E86AB] focus:outline-none"
-            />
-          </div>
-          <button
-            type="button"
-            disabled={exportingPdf}
-            onClick={async () => {
-              setExportingPdf(true);
-              try {
-                await exportCorrosionPredictionsPdf(project);
-                toast.success("PDF report downloaded.");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "PDF export failed.");
-              } finally {
-                setExportingPdf(false);
-              }
-            }}
-            className="rounded-lg border border-[#2E86AB] bg-[#2E86AB] px-4 py-2 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:bg-[#246d8c] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exportingPdf ? "Exporting…" : "Export"}
-          </button>
-        </div>
       </div>
 
       <div className="space-y-3">

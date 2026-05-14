@@ -11,14 +11,6 @@ function FeaturedDemoPage() {
     <CorrosionProjectDetail
       project={STATIC_FEATURED_DEMO}
       defaultReviewStatus="confirmed"
-      headerExtra={
-        <button
-          type="button"
-          className="rounded-lg border border-[#2E9E8F] bg-white px-5 py-2.5 text-xs font-semibold tracking-wide text-[#2E9E8F] uppercase transition-colors hover:bg-[#EEF2FF]"
-        >
-          Reinspect
-        </button>
-      }
     />
   );
 }
