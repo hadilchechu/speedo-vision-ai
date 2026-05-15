@@ -64,7 +64,7 @@ export function LoginButton() {
 
   if (user) {
     return (
-      <div className="flex h-11 items-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white px-3 shadow-sm transition-all duration-200 hover:border-[#D1D5DB] hover:shadow-md">
+      <div className="flex h-11 items-center gap-3 rounded-[12px] border border-[#E5E7EB] bg-white px-3 shadow-sm transition-all duration-200 hover:border-[#D1D5DB] hover:shadow-md">
         <img
           src={user.user_metadata?.avatar_url}
           alt={user.user_metadata?.full_name}

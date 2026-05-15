@@ -38,7 +38,7 @@ const projectsToolbarBtn =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
 
 /** Parses Export JSON (same shape as `downloadProjectManifest`) and adds the project to this session. */
-function importManifestIntoSession(manifestJson: string, videoFile: File): void {
+async function importManifestIntoSession(manifestJson: string, videoFile: File): Promise<void> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(manifestJson);
@@ -59,7 +59,15 @@ function importManifestIntoSession(manifestJson: string, videoFile: File): void 
   if (projectsStore.get(id)) {
     projectsStore.remove(id);
   }
-  const videoURL = URL.createObjectURL(videoFile);
+
+  let videoURL = URL.createObjectURL(videoFile);
+  try {
+    const { uploadVideo } = await import("@/lib/supabase");
+    videoURL = await uploadVideo(videoFile, id);
+  } catch (err) {
+    console.warn("Video upload failed, using local blob URL:", err);
+  }
+
   const project: Project = {
     id,
     name: proj.name,
@@ -220,7 +228,7 @@ function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: 
     setBusy(true);
     try {
       const text = await mf.text();
-      importManifestIntoSession(text, vf);
+      await importManifestIntoSession(text, vf);
       toast.success("Project imported.");
       onDone();
     } catch (e) {
@@ -309,7 +317,6 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     if (!f) return;
     setFile(f);
     setUploadProgress(0);
-    // Simulate quick upload progress for UI
     const start = Date.now();
     const id = setInterval(() => {
       const pct = Math.min(100, Math.round(((Date.now() - start) / 800) * 100));
@@ -341,14 +348,25 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         }
         setAnalyseStatus({ done: i + 1, total: frames.length });
       }
+
       setPhase("building");
       const id = String(Date.now());
       const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
       const finalized = finalizeCorrosionDetections(detections);
+
+      // Upload video to Supabase Storage for persistence
+      let finalVideoURL = videoURL;
+      try {
+        const { uploadVideo } = await import("@/lib/supabase");
+        finalVideoURL = await uploadVideo(file, id);
+      } catch (err) {
+        console.warn("Video upload failed, using local blob URL:", err);
+      }
+
       projectsStore.add({
         id,
         name: projName,
-        videoURL,
+        videoURL: finalVideoURL,
         createdAt: formatCreatedAt(),
         detections: finalized,
         status: "Completed",
@@ -356,6 +374,7 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         fileName: file.name,
         framesAnalysed: frames.length,
       });
+
       await new Promise((r) => setTimeout(r, 400));
       onClose();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
