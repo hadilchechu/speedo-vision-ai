@@ -11,13 +11,13 @@ export async function uploadVideo(file: File, projectId: string): Promise<string
   const filePath = `${user.id}/${projectId}/${file.name}`
 
   const { error } = await supabase.storage
-    .from('videos')
+    .from('video')
     .upload(filePath, file, { upsert: true })
 
   if (error) throw error
 
   const { data } = supabase.storage
-    .from('videos')
+    .from('video')
     .getPublicUrl(filePath)
 
   return data.publicUrl
