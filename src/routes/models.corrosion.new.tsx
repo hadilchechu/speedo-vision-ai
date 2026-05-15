@@ -34,7 +34,7 @@ function NewProjectPage() {
             <UploadCloud className="w-7 h-7 text-[#2E9E8F]" />
           </div>
           <div className="text-base font-semibold text-gray-900 mb-1">Upload your video file</div>
-          <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 2GB</div>
+          <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 50MB</div>
           <button
             onClick={handlePick}
             className="rounded-lg bg-[#2E9E8F] px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-[#268579]"

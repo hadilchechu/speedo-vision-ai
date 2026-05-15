@@ -53,7 +53,7 @@ function TeamIllustration() {
 function TeamPage() {
   return (
     <AppShell>
-      <div className="relative min-h-[calc(100vh-7rem)] overflow-hidden px-0 pt-0 pb-3 md:px-3 lg:px-4 xl:px-5">
+      <div className="relative px-0 pt-0 pb-3 md:px-3 lg:px-4 xl:px-5">
         {/* subtle animated dots */}
         <DotField className="pointer-events-none bottom-12 left-[18%] h-52 w-52 opacity-15" />
 
@@ -104,7 +104,7 @@ function TeamPage() {
           </section>
 
           {/* RIGHT ILLUSTRATION */}
-          <section className="pointer-events-none relative right-16 top-2 hidden lg:block">
+          <section className="pointer-events-none relative right-16 top-30 hidden lg:block">
             <TeamIllustration />
           </section>
         </div>
