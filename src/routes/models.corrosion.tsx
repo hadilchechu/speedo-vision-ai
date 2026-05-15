@@ -334,6 +334,20 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     try {
       setPhase("extracting");
       const { frames, duration, videoURL } = await extractFrames(file);
+  
+      // Start video upload in background immediately — don't await yet
+      // Start video upload in background only if logged in
+const uploadPromise = (async () => {
+  try {
+    const { data: { user } } = await (await import("@/lib/supabase")).supabase.auth.getUser();
+    if (!user) return videoURL; // guest — skip upload, use blob URL instantly
+    const { uploadVideo } = await import("@/lib/supabase");
+    return await uploadVideo(file, String(Date.now()));
+  } catch {
+    return videoURL;
+  }
+})();
+  
       setPhase("analysing");
       setAnalyseStatus({ done: 0, total: frames.length });
       const detections: Detection[] = [];
@@ -348,21 +362,15 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
         }
         setAnalyseStatus({ done: i + 1, total: frames.length });
       }
-
+  
       setPhase("building");
       const id = String(Date.now());
       const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
       const finalized = finalizeCorrosionDetections(detections);
-
-      // Upload video to Supabase Storage for persistence
-      let finalVideoURL = videoURL;
-try {
-  const { uploadVideo } = await import("@/lib/supabase");
-  finalVideoURL = await uploadVideo(file, id);
-} catch (err) {
-  console.warn("Video upload skipped, using local blob URL:", err);
-}
-
+  
+      // Now await the upload — it's been running in background this whole time
+      const finalVideoURL = await uploadPromise;
+  
       projectsStore.add({
         id,
         name: projName,
@@ -374,7 +382,7 @@ try {
         fileName: file.name,
         framesAnalysed: frames.length,
       });
-
+  
       await new Promise((r) => setTimeout(r, 400));
       onClose();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
