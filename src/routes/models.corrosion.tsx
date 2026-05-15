@@ -356,8 +356,12 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
 
       // Upload video to Supabase Storage for persistence
       let finalVideoURL = videoURL;
-const { uploadVideo } = await import("@/lib/supabase");
-finalVideoURL = await uploadVideo(file, id);
+try {
+  const { uploadVideo } = await import("@/lib/supabase");
+  finalVideoURL = await uploadVideo(file, id);
+} catch (err) {
+  console.warn("Video upload skipped, using local blob URL:", err);
+}
 
       projectsStore.add({
         id,

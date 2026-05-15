@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export async function uploadVideo(file: File, projectId: string): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not logged in')
+  if (!user) throw new Error('Sign in to save projects across sessions')
 
   const filePath = `${user.id}/${projectId}/${file.name}`
 
