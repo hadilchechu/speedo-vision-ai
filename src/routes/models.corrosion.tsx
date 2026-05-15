@@ -28,6 +28,7 @@ import {
   finalizeCorrosionDetections,
 } from "@/lib/corrosion-detect";
 import { STATIC_FEATURED_DEMO } from "@/lib/static-featured-demo";
+import { supabase, uploadVideo } from "@/lib/supabase";
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/models/corrosion")({
 const projectsToolbarBtn =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
 
-/** Parses Export JSON (same shape as `downloadProjectManifest`) and adds the project to this session. */
+/** Parses Export JSON and adds the project to this session. */
 async function importManifestIntoSession(manifestJson: string, videoFile: File): Promise<void> {
   let parsed: unknown;
   try {
@@ -61,11 +62,13 @@ async function importManifestIntoSession(manifestJson: string, videoFile: File):
   }
 
   let videoURL = URL.createObjectURL(videoFile);
-  try {
-    const { uploadVideo } = await import("@/lib/supabase");
-    videoURL = await uploadVideo(videoFile, id);
-  } catch (err) {
-    console.warn("Video upload failed, using local blob URL:", err);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    try {
+      videoURL = await uploadVideo(videoFile, id);
+    } catch (err) {
+      console.warn("Video upload failed, using local blob URL:", err);
+    }
   }
 
   const project: Project = {
@@ -332,22 +335,20 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
     if (!file) return;
     setError(null);
     try {
+      // Check session ONCE synchronously from cache — no network call
+      const { data: { session } } = await supabase.auth.getSession();
+      const isLoggedIn = !!session?.user;
+
       setPhase("extracting");
       const { frames, duration, videoURL } = await extractFrames(file);
-  
-      // Start video upload in background immediately — don't await yet
-      // Start video upload in background only if logged in
-const uploadPromise = (async () => {
-  try {
-    const { data: { user } } = await (await import("@/lib/supabase")).supabase.auth.getUser();
-    if (!user) return videoURL; // guest — skip upload, use blob URL instantly
-    const { uploadVideo } = await import("@/lib/supabase");
-    return await uploadVideo(file, String(Date.now()));
-  } catch {
-    return videoURL;
-  }
-})();
-  
+
+      // Start Supabase upload in background ONLY for logged-in users
+      // Guests get instant blob URL — no upload, no delay
+      const id = String(Date.now());
+      const uploadPromise = isLoggedIn
+        ? uploadVideo(file, id).catch(() => videoURL)
+        : Promise.resolve(videoURL);
+
       setPhase("analysing");
       setAnalyseStatus({ done: 0, total: frames.length });
       const detections: Detection[] = [];
@@ -362,15 +363,15 @@ const uploadPromise = (async () => {
         }
         setAnalyseStatus({ done: i + 1, total: frames.length });
       }
-  
+
       setPhase("building");
-      const id = String(Date.now());
       const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
       const finalized = finalizeCorrosionDetections(detections);
-  
-      // Now await the upload — it's been running in background this whole time
+
+      // Await upload — for guests this resolves instantly
+      // For logged-in users it's been running during analysis
       const finalVideoURL = await uploadPromise;
-  
+
       projectsStore.add({
         id,
         name: projName,
@@ -382,7 +383,7 @@ const uploadPromise = (async () => {
         fileName: file.name,
         framesAnalysed: frames.length,
       });
-  
+
       await new Promise((r) => setTimeout(r, 400));
       onClose();
       navigate({ to: "/models/corrosion/$projectId", params: { projectId: id } });
@@ -434,7 +435,7 @@ const uploadPromise = (async () => {
               <UploadCloud className="w-7 h-7 text-[#2E9E8F]" />
             </div>
             <div className="text-base font-semibold text-gray-900 mb-1">Upload your video file</div>
-            <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 2GB</div>
+            <div className="text-xs text-gray-500 mb-4">Supports MP4, MOV, AVI up to 50MB</div>
             <input
               ref={fileInputRef}
               type="file"
@@ -511,7 +512,11 @@ const uploadPromise = (async () => {
               </div>
             </div>
           )}
-          {error && <div className="mt-4 text-xs text-red-600">{error}</div>}
+          {error && (
+            <div className="mt-4 text-xs text-amber-600">
+              {error} — sign in to save projects across sessions.
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 mt-6">
             <button

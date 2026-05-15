@@ -4,11 +4,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-export async function uploadVideo(file: File, projectId: string): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Sign in to save projects across sessions')
 
-  const filePath = `${user.id}/${projectId}/${file.name}`
+export async function uploadVideo(file: File, projectId: string): Promise<string> {
+  // Use cached session — no network call
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) throw new Error('Sign in to save projects across sessions')
+
+  const filePath = `${session.user.id}/${projectId}/${file.name}`
 
   const { error } = await supabase.storage
     .from('video')
