@@ -23,13 +23,13 @@ function DotField({ className }: { className: string }) {
 
 function TeamIllustration() {
   return (
-    <div className="relative aspect-square w-[500px] opacity-[0.38] max-lg:mx-auto max-lg:w-full max-lg:max-w-[360px]">
+    <div className="relative aspect-square w-[350px] opacity-[0.38] max-lg:mx-auto max-lg:w-full max-lg:max-w-[360px]">
       {/* dotted accents */}
       <DotField className="-right-10 top-6 h-40 w-44 opacity-30" />
       <DotField className="-bottom-8 left-0 h-32 w-40 opacity-20" />
 
       {/* main soft circle */}
-      <div className="absolute inset-[18%] rounded-full bg-[#EAF2FC]/45 blur-[2px]" />
+      <div className="absolute inset-[18%] rounded-full bg-[#EAF2FC]/65 blur-[2px]" />
 
       {/* left avatar */}
       <div className="absolute left-[34%] top-[36%] h-[10%] w-[10%] rounded-full bg-[#AFCBED]/55" />
@@ -40,7 +40,7 @@ function TeamIllustration() {
       <div className="absolute right-[25%] top-[58%] h-[12%] w-[20%] rounded-t-full bg-[#AFCBED]/36" />
 
       {/* invite card */}
-      <div className="absolute bottom-[18%] right-[18%] flex h-[18%] w-[18%] items-center justify-center rounded-2xl border border-dashed border-[#9CB8DB]/60 bg-white/20 backdrop-blur-[1px]">
+      <div className="absolute bottom-[0%] right-[18%] flex h-[18%] w-[18%] items-center justify-center rounded-2xl border border-dashed border-[#9CB8DB]/60 bg-white/20 backdrop-blur-[1px]">
         <UserPlus
           className="h-[42%] w-[42%] text-[#7EA4CC]/70"
           strokeWidth={1.6}

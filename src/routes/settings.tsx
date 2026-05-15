@@ -23,7 +23,7 @@ function DotField({ className }: { className: string }) {
 
 function SettingsIllustration() {
   return (
-    <div className="relative aspect-square w-[500px] opacity-[0.34] max-lg:mx-auto max-lg:w-full max-lg:max-w-[360px]">
+    <div className="relative aspect-square w-[400px] opacity-[0.34] max-lg:mx-auto max-lg:w-full max-lg:max-w-[360px]">
       {/* dotted accents */}
       <DotField className="-right-10 top-6 h-40 w-44 opacity-30" />
       <DotField className="-bottom-8 left-0 h-32 w-40 opacity-20" />
@@ -32,7 +32,7 @@ function SettingsIllustration() {
       <div className="absolute inset-[18%] rounded-full bg-[#EAF2FC]/45 blur-[2px]" />
 
       {/* settings sliders */}
-      <div className="absolute left-[30%] top-[34%] flex flex-col gap-8">
+      <div className="absolute left-[30%] top-[60%] flex flex-col gap-8">
         <div className="relative h-2 w-44 rounded-full bg-[#AFCBED]/45">
           <div className="absolute left-[18%] top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#7EA4CC]/65" />
         </div>
@@ -47,7 +47,7 @@ function SettingsIllustration() {
       </div>
 
       {/* floating settings card */}
-      <div className="absolute bottom-[18%] right-[16%] flex h-[18%] w-[18%] items-center justify-center rounded-2xl border border-dashed border-[#9CB8DB]/60 bg-white/20 backdrop-blur-[1px]">
+      <div className="absolute bottom-[-8%] right-[16%] flex h-[18%] w-[18%] items-center justify-center rounded-2xl border border-dashed border-[#9CB8DB]/60 bg-white/20 backdrop-blur-[1px]">
         <SlidersHorizontal
           className="h-[42%] w-[42%] text-[#7EA4CC]/70"
           strokeWidth={1.7}

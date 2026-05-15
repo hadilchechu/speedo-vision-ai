@@ -3,13 +3,13 @@ import {
   Boxes,
   Users,
   Settings as SettingsIcon,
-  ChevronDown,
   MessageCircle,
   ArrowLeft,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
+import { LoginButton } from "@/components/auth/login-button";
 import { InteractiveDotGrid } from "@/components/interactive-dot-grid";
 
 const navItems = [
@@ -52,7 +52,6 @@ function Sidebar() {
 }
 
 function TopBar() {
-  const [open, setOpen] = useState(false);
   const path = useRouterState({ select: (s) => s.location.pathname });
   let back: { to: string; label: string } | null = null;
   if (path.startsWith("/models/corrosion/")) {
@@ -78,54 +77,7 @@ function TopBar() {
           <h1 className="text-lg font-semibold text-gray-900">Models</h1>
         ) : null}
       </div>
-      <div className="relative">
-        <button
-          onClick={() => setOpen(!open)}
-          className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-gray-50"
-        >
-          <img
-            src="https://i.pravatar.cc/72?img=12"
-            alt="John Stephan"
-            className="w-9 h-9 rounded-full object-cover"
-          />
-          <div className="text-left leading-tight">
-            <div className="font-medium text-gray-900">John Stephan</div>
-            <div className="text-xs text-gray-500">Sales</div>
-          </div>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
-        </button>
-        {open && (
-          <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-[#E5E7EB] bg-white py-1 shadow-lg">
-            <button
-              type="button"
-              onClick={() => {
-                toast.info("Profile — coming soon");
-                setOpen(false);
-              }}
-              className="mx-1 block w-full rounded-md px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Profile
-            </button>
-            <Link
-              to="/settings"
-              onClick={() => setOpen(false)}
-              className="mx-1 block rounded-md px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Account settings
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                toast.info("Sign out — coming soon");
-                setOpen(false);
-              }}
-              className="mx-1 block w-full rounded-md px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </div>
+      <LoginButton />
     </div>
   );
 }
