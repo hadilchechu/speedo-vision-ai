@@ -28,8 +28,8 @@ const models: Model[] = [
     to: null,
     type: "Segmentation",
     icon: Boxes,
-    title: "Car Scratch",
-    project: "Cars_new",
+    title: "Aircraft Scratch",
+    project: "Aircraft_1",
     date: "01 Dec 2021",
   },
 ];

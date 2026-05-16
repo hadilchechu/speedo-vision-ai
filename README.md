@@ -1,109 +1,131 @@
 # Speedo Vision AI
 
-AI-assisted **video inspection** for industrial corrosion detection: upload footage, sample frames, run object detection, then review results on a **timeline**, **predictions** grid, and optional **PDF export**. Ships with a **bundled demo** at `/models/corrosion/pipeline-inspection-01`.
+> AI-powered video inspection platform for industrial corrosion detection — built solo, for free by a UX designer learning full-stack AI development through vibe coding.
+
+🔗 **[Live Demo](https://speedo-vision-ai.hadilchechu.workers.dev)** · built with React, TypeScript, Cloudflare Workers, Supabase, and Hugging Face
+
+---
+
+## What it does
+
+Speedo Vision AI lets engineers upload pipeline inspection footage and automatically detect corrosion using an AI model. Upload an MP4, the app extracts frames, runs each through a object detection model, and presents results on an interactive timeline with bounding boxes, a predictions grid, severity stats, and a PDF/Video export.
+
+---
+
+## Why I built this
+
+I'm a UX designer who wanted to understand how AI products are actually built — not just how to design them.
+
+I challenged myself to build a full-stack AI application completely solo, using AI-assisted coding (Claude, Cursor, Codex) to bridge the gap between design knowledge and engineering. Every architectural decision, every bug, every deployment was mine to figure out.
+
+This project taught me:
+- How to integrate a real ML model from Hugging Face into a production app
+- How to architect a full-stack app with auth, database, and file storage
+- How vibe coding works in practice — and where it breaks down
+- The gap between designing AI interfaces and building them
+
+---
 
 ## Features
 
-- **Corrosion Detection — Video** workflow: new project from MP4, frame extraction, remote inference API, in-browser review
-- **Timeline** with playhead-synced bounding boxes, confirm / dismiss / label edits (session state)
-- **Predictions** tab with stats and **Export** to PDF (original + annotated thumbnails)
-- **Session-only projects** in the browser (import/export JSON + video for portability)
+- **Corrosion detection** — upload MP4 footage, extract frames automatically, run inference via Hugging Face API
+- **Interactive timeline** — playhead-synced bounding boxes with confirm / dismiss / label editing
+- **Predictions grid** — detection stats, confidence scores, severity breakdown
+- **PDF export** — full inspection report with original and annotated thumbnails
+- **Google OAuth** — sign in with Google via Supabase Auth
+- **Persistent storage** — projects and videos saved to Supabase, available across sessions and devices
+- **Bundled demo** — try it instantly at `/models/corrosion/pipeline-inspection-01` with no upload needed
+
+---
 
 ## Tech stack
 
-| Layer | Choice |
-|--------|--------|
-| App | [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) (file routes) |
-| UI | React 19, Tailwind CSS 4, Radix UI, lucide-react |
-| Server | `src/server.ts` → TanStack Start server entry |
-| Deploy | Cloudflare Workers (`wrangler.jsonc`) |
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Tailwind CSS, TanStack Router |
+| Backend | Cloudflare Workers |
+| Auth | Supabase Auth (Google OAuth) |
+| Database | Supabase Postgres (with row-level security) |
+| File storage | Supabase Storage |
+| AI model | Hugging Face (corrosion object detection) |
 | PDF | jsPDF + jspdf-autotable |
+| Deploy | Cloudflare Workers (auto-deploy via GitHub) |
 
-## Prerequisites
+---
 
-- **Node.js** 22+
-- **npm** (primary); **bun** optional if you refresh `bun.lock` after dependency changes
-- **Cloudflare account** (only if you deploy to Workers)
+## Architecture
 
-## Local development
+```
+Browser → Cloudflare Workers → Supabase (Auth + DB + Storage)
+                          ↓
+               Hugging Face Inference API
+```
+
+- Users authenticate via Google OAuth (Supabase handles the full flow)
+- Videos upload directly to Supabase Storage with per-user folder isolation
+- Detection results stored in Postgres with row-level security (users only see their own projects)
+- Frame inference calls a remote Hugging Face Space — swap `API_URL` in `src/lib/corrosion-detect.ts` to use your own model
+
+---
+
+## Running locally
 
 ```bash
-git clone <your-fork-or-repo-url>
+git clone https://github.com/hadilchechu/speedo-vision-ai.git
 cd speedo-vision-ai
 npm install
+```
+
+Create a `.env` file in the project root:
+
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Then:
+
+```bash
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
+Open `http://localhost:8080`
 
-### Why the repo root looks busy
+---
 
-Vite, ESLint, Prettier, TypeScript, and Wrangler **expect config next to `package.json`**—that is normal. Most code lives in **`src/`**; **`public/`** is static assets.
-
-| Root file | Purpose |
-|-----------|---------|
-| `vite.config.ts` | Vite + TanStack Start |
-| `eslint.config.js`, `.prettierrc`, `.prettierignore` | Lint & format |
-| `components.json` | shadcn/ui paths |
-| `tsconfig.json` | TypeScript |
-| `wrangler.jsonc` | Cloudflare Workers entry |
-| `vercel.json` | Optional SPA rewrites on Vercel |
-
-### Two lockfiles (`package-lock.json` + `bun.lock`)
-
-Both are committed intentionally:
-
-- **`package-lock.json`** — use with **`npm install`** / **`npm ci`** (typical local flow).
-- **`bun.lock`** — needed if CI (e.g. Cloudflare) runs **`bun install --frozen-lockfile`**.
-
-After **changing dependencies**, refresh both locks so installs stay reproducible:
-
-```bash
-npm install
-bun install
-```
-
-To use **only one** package manager in CI, update your pipeline first—then you can drop the other lockfile.
-
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Production client + server bundles |
-| `npm run preview` | Preview production build |
-| `npm run lint` | ESLint |
-| `npm run cf:dev` | Wrangler dev (Workers) |
-| `npm run media:strip-demo-audio` | Strip audio from `public/demo-inspection/demo.mp4` (needs FFmpeg) |
-
-## Detection API
-
-Frame inference calls a Hugging Face Space by default:
-
-`src/lib/corrosion-detect.ts` → `API_URL` (`detectFrame`).
-
-Point `API_URL` at your own deployment if you replace the model.
-
-## Cloudflare setup
-
-Deploy with your usual Workers pipeline (`wrangler deploy` or CI). Ensure `bun.lock` stays in sync if CI uses `bun install --frozen-lockfile`.
-
-## Repository layout
+## Project structure
 
 ```
 src/
-  routes/           # File-based routes (TanStack Router)
-  components/       # App shell, corrosion UI, shadcn-style UI kit
-  lib/              # Detection, PDF export, static demo data, in-memory project store
-  server.ts         # Worker fetch handler entry
-public/demo-inspection/   # Bundled demo MP4 + folder README
-scripts/            # e.g. strip-demo-audio.sh
+  routes/         # Page components (TanStack file-based routing)
+  components/     # App shell, auth, corrosion UI
+  lib/            # Detection, PDF export, Supabase client, project store
+  server.ts       # Cloudflare Worker entry point
+public/
+  demo-inspection/ # Bundled demo video
 ```
 
-## Bundled demo asset
+---
 
-`public/demo-inspection/demo.mp4` powers the **Featured inspection demo**. Detection rows for that route live in `src/lib/static-featured-demo.ts` (illustrative boxes for the stock clip). Replace the video and paste **real model JSON** there if you want pixel-perfect alignment.
+## What I learned
 
-More detail: [`public/demo-inspection/README.md`](public/demo-inspection/README.md).
+This was my first full-stack AI project built entirely solo. Key lessons:
+
+- **Vibe coding is real but requires judgment** — AI can write the code but you need to understand enough to spot when it's wrong
+- **Auth is always harder than it looks** — OAuth redirects, session persistence, and CORS took real debugging
+- **Storage and database are separate concerns** — learned this the hard way when videos disappeared after logout
+- **Designing and building are very different skills** — having both perspectives made me a better engineer and a better designer
+
+---
+
+## About me
+
+UX Designer, now expanding into AI product development. I believe the best AI products are built by people who understand both design and engineering — so I'm learning to be one of them.
+
+[LinkedIn](https://linkedin.com/in/hadilchechu) · [Live App](https://speedo-vision-ai.hadilchechu.workers.dev)
+
+---
 
 ## License
 
-No license file is included in this template—add a `LICENSE` that matches how you distribute the project.
+MIT
