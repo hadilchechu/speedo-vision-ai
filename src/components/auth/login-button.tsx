@@ -6,11 +6,7 @@ import { loadProjectsFromSupabase } from "@/lib/projects-store";
 
 function GoogleIcon() {
   return (
-    <svg
-      viewBox="0 0 48 48"
-      className="h-5 w-5"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
       <path
         fill="#FFC107"
         d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.215 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
@@ -59,7 +55,13 @@ export function LoginButton() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
+
+    if (window.location.pathname === "/") {
+      window.location.reload();
+      return;
+    }
+
+    window.location.assign("/");
   };
 
   if (user) {
@@ -115,9 +117,7 @@ export function LoginButton() {
           <GoogleIcon />
         </div>
 
-        <span className="text-sm font-medium text-[#111827]">
-          Login with Google
-        </span>
+        <span className="text-sm font-medium text-[#111827]">Login with Google</span>
       </button>
 
       <AuthModal open={open} onClose={() => setOpen(false)} />

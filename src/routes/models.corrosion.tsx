@@ -182,9 +182,9 @@ function CorrosionModelPage() {
                 key={p.id}
                 to="/models/corrosion/$projectId"
                 params={{ projectId: p.id }}
-                className="flex items-center gap-4 rounded-lg border border-[#E5E7EB] bg-white p-4 transition hover:border-[#2E86AB] hover:shadow-sm"
+                className="group flex items-center gap-4 rounded-lg border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
                   <Folder className="h-5 w-5 text-[#2E86AB]" />
                 </div>
 
@@ -206,15 +206,15 @@ function CorrosionModelPage() {
                   {p.status}
                 </span>
 
-                <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
               </Link>
             ))}
 
             <Link
               to="/models/corrosion/pipeline-inspection-01"
-              className="flex items-center gap-4 rounded-lg border border-[#2E86AB]/30 bg-white p-4 ring-1 ring-[#2E86AB]/10 transition hover:border-[#2E86AB] hover:shadow-sm"
+              className="group flex items-center gap-4 rounded-lg border border-[#2E86AB]/25 bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
                 <Folder className="h-5 w-5 text-[#2E86AB]" />
               </div>
 
@@ -241,7 +241,7 @@ function CorrosionModelPage() {
                 {STATIC_FEATURED_DEMO.status}
               </span>
 
-              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
             </Link>
           </div>
         </div>
@@ -279,14 +279,13 @@ function CorrosionModelPage() {
             </p>
 
             <div className="divide-y divide-[#F0F2F7]">
-              <MetaRow label="Model Id" value="10019" />
               <MetaRow
                 label="Project Name"
                 value="Project_corrosion_video"
               />
               <MetaRow label="Type" value="Object Detection" />
-              <MetaRow label="Algorithm" value="MaskRCNN0" />
-              <MetaRow label="Created" value="08 May 2025" />
+              <MetaRow label="Algorithm" value="YOLOv11" />
+              <MetaRow label="Created" value="08 Feb 2026" />
             </div>
           </div>
         </div>
@@ -893,8 +892,8 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-[#E5E7EB] bg-white p-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF]">
+    <div className="group flex items-center gap-4 rounded-xl border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/35 hover:bg-white hover:shadow-[0_12px_28px_rgba(15,23,42,0.07)] hover:ring-1 hover:ring-[#2E86AB]/10">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
         <Icon className="h-5 w-5 text-[#2E86AB]" />
       </div>
 

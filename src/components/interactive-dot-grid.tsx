@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-const GRID_SPACING = 22;
-const BASE_DOT_RADIUS = 0.9;
-const INFLUENCE_RADIUS = 130;
-const SMOOTH = 0.14;
+const GRID_SPACING = 24;
+const BASE_DOT_RADIUS = 0.58;
+const INFLUENCE_RADIUS = 126;
+const SMOOTH = 0.12;
 const MAX_DPR = 2;
 
 const BASE_RGBA = "rgba(55, 95, 125,";
@@ -43,7 +43,7 @@ export function InteractiveDotGrid({ className }: InteractiveDotGridProps) {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    const baseA = 0.11;
+    const baseA = 0.085;
     for (let y = GRID_SPACING / 2; y < h; y += GRID_SPACING) {
       for (let x = GRID_SPACING / 2; x < w; x += GRID_SPACING) {
         ctx.beginPath();
@@ -78,7 +78,7 @@ export function InteractiveDotGrid({ className }: InteractiveDotGridProps) {
     smoothRef.current = { x: sx, y: sy };
 
     const rSq = INFLUENCE_RADIUS * INFLUENCE_RADIUS;
-    const baseA = 0.1;
+    const baseA = 0.08;
 
     for (let y = GRID_SPACING / 2; y < h; y += GRID_SPACING) {
       for (let x = GRID_SPACING / 2; x < w; x += GRID_SPACING) {
@@ -91,14 +91,14 @@ export function InteractiveDotGrid({ className }: InteractiveDotGridProps) {
           influence = smoothstep(INFLUENCE_RADIUS, 0, d);
         }
 
-        const radius = BASE_DOT_RADIUS + influence * 0.65;
-        const coreAlpha = baseA + influence * 0.22;
+        const radius = BASE_DOT_RADIUS + influence * 0.44;
+        const coreAlpha = baseA + influence * 0.24;
 
         if (influence > 0.05) {
-          const glowR = radius + 1.8 + influence * 4.2;
+          const glowR = radius + 1.4 + influence * 3.4;
           ctx.beginPath();
           ctx.arc(x, y, glowR, 0, Math.PI * 2);
-          ctx.fillStyle = `${ACCENT_RGBA}${0.07 * influence})`;
+          ctx.fillStyle = `${ACCENT_RGBA}${0.075 * influence})`;
           ctx.fill();
         }
 
@@ -106,7 +106,7 @@ export function InteractiveDotGrid({ className }: InteractiveDotGridProps) {
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fillStyle =
           influence > 0.08
-            ? `${ACCENT_RGBA}${Math.min(0.38, coreAlpha + influence * 0.08)})`
+            ? `${ACCENT_RGBA}${Math.min(0.42, coreAlpha + influence * 0.08)})`
             : `${BASE_RGBA}${coreAlpha})`;
         ctx.fill();
       }
@@ -194,11 +194,7 @@ export function InteractiveDotGrid({ className }: InteractiveDotGridProps) {
       const rect = container.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      const near =
-        mx >= -pad &&
-        my >= -pad &&
-        mx <= rect.width + pad &&
-        my <= rect.height + pad;
+      const near = mx >= -pad && my >= -pad && mx <= rect.width + pad && my <= rect.height + pad;
       if (near) {
         targetRef.current = { x: mx, y: my, active: true };
       } else {

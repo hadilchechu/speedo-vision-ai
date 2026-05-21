@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, Scan, ChevronDown } from "lucide-react";
+import { Boxes, Scan } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/")({
@@ -34,29 +34,20 @@ const models: Model[] = [
   },
 ];
 
-function FilterSelect({ label }: { label: string }) {
-  return (
-    <button className="flex h-9 items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-gray-700 hover:border-[#2E86AB]">
-      {label}
-      <ChevronDown className="w-4 h-4 text-gray-500" />
-    </button>
-  );
-}
-
 function ModelCard({ model }: { model: Model }) {
   const Icon = model.icon;
   const inner = (
     <>
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-7 h-7 rounded-md bg-[#EEF2FF] flex items-center justify-center">
-          <Icon className="w-4 h-4 text-[#2E86AB]" />
+      <div className="mb-4 flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
+          <Icon className="h-4 w-4 text-[#2E86AB]" />
         </div>
         <span className="text-xs font-semibold text-[#2E86AB] uppercase tracking-wide">
           {model.type}
         </span>
       </div>
-      <h3 className="text-base font-semibold text-gray-900 mb-8">{model.title}</h3>
-      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-[#F0F2F7]">
+      <h3 className="mb-8 text-base font-semibold text-gray-900">{model.title}</h3>
+      <div className="flex items-center justify-between border-t border-[#F0F2F7] pt-3 text-xs text-gray-500">
         <span>{model.project}</span>
         <span>{model.date}</span>
       </div>
@@ -64,7 +55,7 @@ function ModelCard({ model }: { model: Model }) {
   );
   if (!model.to) {
     return (
-      <div className="block bg-white border border-[#E5E7EB] rounded-lg p-5 opacity-70 cursor-not-allowed">
+      <div className="block cursor-not-allowed rounded-lg border border-[#E5E7EB] bg-white/80 p-5 opacity-70 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
         {inner}
       </div>
     );
@@ -72,7 +63,7 @@ function ModelCard({ model }: { model: Model }) {
   return (
     <Link
       to={model.to}
-      className="block bg-white border border-[#E5E7EB] rounded-lg p-5 hover:border-[#2E86AB] hover:shadow-sm transition"
+      className="group block rounded-lg border border-[#E5E7EB] bg-white/95 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
     >
       {inner}
     </Link>
@@ -82,10 +73,7 @@ function ModelCard({ model }: { model: Model }) {
 function ModelsListPage() {
   return (
     <AppShell>
-      <div className="flex items-center gap-3 mb-6">
-        <FilterSelect label="All Models" />
-        <FilterSelect label="Newest first" />
-      </div>
+      <p className="mb-3 text-sm text-gray-400">Select model</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {models.map((m) => (
           <ModelCard key={m.title} model={m} />

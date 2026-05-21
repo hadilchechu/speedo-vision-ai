@@ -1,11 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  Boxes,
-  Users,
-  Settings as SettingsIcon,
-  MessageCircle,
-  ArrowLeft,
-} from "lucide-react";
+import { Boxes, Users, Settings as SettingsIcon, MessageCircle, ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo.png";
@@ -25,9 +19,13 @@ function Sidebar() {
       className="fixed inset-y-0 left-0 w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
-      <div className="flex h-16 items-center border-b border-[#E5E7EB] px-5 pt-5">
+      <Link
+        to="/"
+        aria-label="Go to home"
+        className="flex h-16 items-center border-b border-[#E5E7EB] px-5 pt-5"
+      >
         <img src={logoUrl} alt="Speedo.ai" className="h-14 w-auto" />
-      </div>
+      </Link>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
           const active =
@@ -47,6 +45,29 @@ function Sidebar() {
           );
         })}
       </nav>
+      <div className="px-3 pb-4">
+        <a
+          href="https://www.linkedin.com/in/hadilchechu/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Hadil C on LinkedIn"
+          className="block rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-3 shadow-sm transition hover:border-[#0A66C2] hover:bg-[#F0F7FF] hover:shadow-md"
+        >
+          <div className="mb-2 text-[11px] font-medium uppercase text-gray-400">Created by</div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold text-[#2E86AB] shadow-sm ring-1 ring-[#D9E7F2]">
+              HC
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-gray-800">Hadil C</div>
+              <div className="text-[11px] text-gray-500">Speedo.ai</div>
+            </div>
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] bg-[#0A66C2] text-[11px] font-bold leading-none text-white">
+              in
+            </span>
+          </div>
+        </a>
+      </div>
     </aside>
   );
 }
