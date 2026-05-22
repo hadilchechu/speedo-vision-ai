@@ -358,8 +358,8 @@ function TimelineTab({
   const progressPct = project.duration ? (currentTime / project.duration) * 100 : 0;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div className="space-y-4 lg:col-span-2">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <div className="space-y-4 lg:sticky lg:top-8 lg:col-span-2">
         <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
           <div
             className="relative w-full overflow-hidden rounded-md bg-[#1f2937]"

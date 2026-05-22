@@ -53,7 +53,7 @@ function Sidebar() {
           aria-label="Hadil C on LinkedIn"
           className="block rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-3 shadow-sm transition hover:border-[#0A66C2] hover:bg-[#F0F7FF] hover:shadow-md"
         >
-          <div className="mb-2 text-[11px] font-medium uppercase text-gray-400">Created by</div>
+          <div className="mb-2 text-[11px] font-medium uppercase text-gray-400">Creation of</div>
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-xs font-semibold text-[#2E86AB] shadow-sm ring-1 ring-[#D9E7F2]">
               HC

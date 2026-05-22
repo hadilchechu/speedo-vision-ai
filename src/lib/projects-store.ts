@@ -25,9 +25,16 @@ let projects: Project[] = [];
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
+type AddProjectOptions = {
+  persist?: boolean;
+  userId?: string | null;
+};
+
 // Load projects from Supabase for the logged-in user
 export async function loadProjectsFromSupabase() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
 
   const { data, error } = await supabase
@@ -60,25 +67,28 @@ export const projectsStore = {
   getSnapshot() {
     return projects;
   },
-  async add(p: Project) {
-    const { data: { user } } = await supabase.auth.getUser();
+  async add(p: Project, options: AddProjectOptions = {}) {
     projects = [p, ...projects.filter((project) => project.id !== p.id)];
     emit();
 
-    if (user) {
-      await supabase.from("projects").upsert({
-        id: p.id,
-        user_id: user.id,
-        name: p.name,
-        video_url: p.videoURL,
-        file_name: p.fileName,
-        created_at: p.createdAt,
-        status: p.status,
-        duration: p.duration,
-        frames_analysed: p.framesAnalysed,
-        detections: p.detections,
-      });
-    }
+    if (options.persist === false) return;
+
+    const userId = options.userId ?? (await supabase.auth.getUser()).data.user?.id;
+
+    if (!userId) return;
+
+    await supabase.from("projects").upsert({
+      id: p.id,
+      user_id: userId,
+      name: p.name,
+      video_url: p.videoURL,
+      file_name: p.fileName,
+      created_at: p.createdAt,
+      status: p.status,
+      duration: p.duration,
+      frames_analysed: p.framesAnalysed,
+      detections: p.detections,
+    });
   },
   get(id: string) {
     return projects.find((p) => p.id === id);
@@ -95,8 +105,12 @@ export function useProjects() {
 }
 
 export function formatTimestamp(t: number) {
-  const m = Math.floor(t / 60).toString().padStart(2, "0");
-  const s = Math.floor(t % 60).toString().padStart(2, "0");
+  const m = Math.floor(t / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = Math.floor(t % 60)
+    .toString()
+    .padStart(2, "0");
   return `${m}:${s}`;
 }
 

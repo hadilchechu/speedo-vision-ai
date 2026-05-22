@@ -27,13 +27,29 @@ function GoogleIcon() {
   );
 }
 
+function getDisplayName(user: User) {
+  return user.user_metadata?.full_name || user.email || "User";
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
 export function LoginButton() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setAvatarFailed(false);
 
       if (session?.user) {
         loadProjectsFromSupabase();
@@ -44,6 +60,7 @@ export function LoginButton() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAvatarFailed(false);
 
       if (session?.user) {
         loadProjectsFromSupabase();
@@ -65,17 +82,29 @@ export function LoginButton() {
   };
 
   if (user) {
+    const displayName = getDisplayName(user);
+    const avatarUrl = user.user_metadata?.avatar_url;
+    const showAvatarImage = avatarUrl && !avatarFailed;
+
     return (
       <div className="flex h-11 items-center gap-3 rounded-[12px] border border-[#E5E7EB] bg-white px-3 shadow-sm transition-all duration-200 hover:border-[#D1D5DB] hover:shadow-md">
-        <img
-          src={user.user_metadata?.avatar_url}
-          alt={user.user_metadata?.full_name}
-          className="h-8 w-8 rounded-full border border-gray-200"
-        />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#D9E7F2] bg-[#EEF2FF] text-xs font-semibold text-[#2E86AB]">
+          {showAvatarImage ? (
+            <img
+              src={avatarUrl}
+              alt={displayName}
+              referrerPolicy="no-referrer"
+              onError={() => setAvatarFailed(true)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            getInitials(displayName)
+          )}
+        </div>
 
         <div className="flex flex-col leading-tight">
           <span className="max-w-[140px] truncate text-sm font-semibold text-[#111827]">
-            {user.user_metadata?.full_name}
+            {displayName}
           </span>
 
           <button

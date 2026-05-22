@@ -12,6 +12,8 @@ import {
   UploadCloud,
   CheckCircle2,
   FileDown,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +40,8 @@ import { supabase, uploadVideo } from "@/lib/supabase";
 
 const AVG_SECS_PER_FRAME = 7;
 const CONCURRENCY = 2;
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -45,6 +49,45 @@ export const Route = createFileRoute("/models/corrosion")({
 
 const projectsToolbarBtn =
   "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-4 text-xs font-semibold uppercase tracking-wide transition-colors";
+
+type ProjectsViewMode = "list" | "grid";
+
+function ProjectVideoFrame({ project }: { project: Project }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [project.videoURL]);
+
+  if (failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#EEF2FF]">
+        <Folder className="h-8 w-8 text-[#2E86AB]" />
+      </div>
+    );
+  }
+
+  return (
+    <video
+      ref={videoRef}
+      src={project.videoURL}
+      muted
+      playsInline
+      preload="metadata"
+      className="h-full w-full object-cover"
+      onLoadedMetadata={() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const timestamp = project.detections[0]?.timestamp ?? 0;
+        const duration = Number.isFinite(video.duration) ? video.duration : timestamp;
+        video.currentTime = Math.max(0, Math.min(timestamp, Math.max(0, duration - 0.05)));
+      }}
+      onError={() => setFailed(true)}
+      aria-hidden
+    />
+  );
+}
 
 async function importManifestIntoSession(
   manifestJson: string,
@@ -90,7 +133,9 @@ async function importManifestIntoSession(
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (session?.user) {
+  const userId = session?.user?.id ?? null;
+
+  if (userId) {
     try {
       videoURL = await uploadVideo(videoFile, id);
     } catch (err) {
@@ -121,14 +166,24 @@ async function importManifestIntoSession(
         : undefined,
   };
 
-  projectsStore.add(project);
+  projectsStore.add(project, { persist: !!userId, userId });
 }
 
 function CorrosionModelPage() {
   const [openNew, setOpenNew] = useState(false);
   const [openImport, setOpenImport] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projectsViewMode, setProjectsViewMode] = useState<ProjectsViewMode>("list");
 
   const sessionProjects = useProjects();
+  const normalizedProjectSearch = projectSearch.trim().toLowerCase();
+  const filteredSessionProjects = normalizedProjectSearch
+    ? sessionProjects.filter((p) => p.name.toLowerCase().includes(normalizedProjectSearch))
+    : sessionProjects;
+  const showBundledDemo =
+    !normalizedProjectSearch ||
+    STATIC_FEATURED_DEMO.name.toLowerCase().includes(normalizedProjectSearch);
+  const hasProjectResults = filteredSessionProjects.length > 0 || showBundledDemo;
 
   return (
     <AppShell>
@@ -166,119 +221,203 @@ function CorrosionModelPage() {
             </div>
           </div>
 
-          <div className="relative mb-4 w-1/3 min-w-[180px]">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="relative w-1/3 min-w-[180px]">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 
-            <input
-              type="text"
-              placeholder="Search projects"
-              className="h-9 w-full rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-sm focus:border-[#2E86AB] focus:outline-none"
-            />
-          </div>
+              <input
+                type="text"
+                value={projectSearch}
+                onChange={(e) => setProjectSearch(e.target.value)}
+                placeholder="Search projects"
+                className="h-9 w-full rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-sm focus:border-[#2E86AB] focus:outline-none"
+              />
+            </div>
 
-          <div className="space-y-3">
-            {sessionProjects.map((p) => (
-              <Link
-                key={p.id}
-                to="/models/corrosion/$projectId"
-                params={{ projectId: p.id }}
-                className="group flex items-center gap-4 rounded-lg border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
+            <div className="flex h-9 items-center rounded-lg border border-[#E5E7EB] bg-white p-1">
+              <button
+                type="button"
+                aria-label="List view"
+                onClick={() => setProjectsViewMode("list")}
+                className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                  projectsViewMode === "list"
+                    ? "bg-[#EEF2FF] text-[#2E86AB]"
+                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                }`}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
-                  <Folder className="h-5 w-5 text-[#2E86AB]" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold text-gray-900">
-                    {p.name}
-                  </div>
-
-                  <div className="mt-0.5 text-xs text-gray-500">
-                    Last inspected: {p.createdAt}
-                  </div>
-                </div>
-
-                <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
-                  {p.detections.length} detections
-                </span>
-
-                <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                  {p.status}
-                </span>
-
-                <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
-              </Link>
-            ))}
-
-            <Link
-              to="/models/corrosion/pipeline-inspection-01"
-              className="group flex items-center gap-4 rounded-lg border border-[#2E86AB]/25 bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
-                <Folder className="h-5 w-5 text-[#2E86AB]" />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">
-                  Bundled demo
-                </div>
-
-                <div className="truncate text-sm font-bold text-gray-900">
-                  {STATIC_FEATURED_DEMO.name}
-                </div>
-
-                <div className="mt-0.5 text-xs text-gray-500">
-                  Video and analysis ship with this deploy ·{" "}
-                  {STATIC_FEATURED_DEMO.createdAt}
-                </div>
-              </div>
-
-              <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
-                {STATIC_FEATURED_DEMO.detections.length} detections
-              </span>
-
-              <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                {STATIC_FEATURED_DEMO.status}
-              </span>
-
-              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
-            </Link>
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Grid view"
+                onClick={() => setProjectsViewMode("grid")}
+                className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                  projectsViewMode === "grid"
+                    ? "bg-[#EEF2FF] text-[#2E86AB]"
+                    : "text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+
+          {projectsViewMode === "list" ? (
+            <div className="space-y-3">
+              {filteredSessionProjects.map((p) => (
+                <Link
+                  key={p.id}
+                  to="/models/corrosion/$projectId"
+                  params={{ projectId: p.id }}
+                  className="group flex items-center gap-4 rounded-lg border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
+                    <Folder className="h-5 w-5 text-[#2E86AB]" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-gray-900">
+                      {p.name}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      Last inspected: {p.createdAt}
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                    {p.detections.length} detections
+                  </span>
+
+                  <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                    {p.status}
+                  </span>
+
+                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
+                </Link>
+              ))}
+
+              {showBundledDemo && (
+                <Link
+                  to="/models/corrosion/pipeline-inspection-01"
+                  className="group flex items-center gap-4 rounded-lg border border-[#2E86AB]/25 bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
+                    <Folder className="h-5 w-5 text-[#2E86AB]" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">
+                      Bundled demo
+                    </div>
+
+                    <div className="truncate text-sm font-bold text-gray-900">
+                      {STATIC_FEATURED_DEMO.name}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      Video and analysis ship with this deploy ·{" "}
+                      {STATIC_FEATURED_DEMO.createdAt}
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                    {STATIC_FEATURED_DEMO.detections.length} detections
+                  </span>
+
+                  <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                    {STATIC_FEATURED_DEMO.status}
+                  </span>
+
+                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {filteredSessionProjects.map((p) => (
+                <Link
+                  key={p.id}
+                  to="/models/corrosion/$projectId"
+                  params={{ projectId: p.id }}
+                  className="group overflow-hidden rounded-lg border border-[#E5E7EB] bg-white/95 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
+                >
+                  <div className="relative aspect-video overflow-hidden bg-[#EEF2FF]">
+                    <ProjectVideoFrame project={p} />
+                  </div>
+                  <div className="p-4">
+                    <div className="truncate text-sm font-bold text-gray-900">{p.name}</div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-500">{p.createdAt}</span>
+                      <span className="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                        {p.detections.length} detections
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+
+              {showBundledDemo && (
+                <Link
+                  to="/models/corrosion/pipeline-inspection-01"
+                  className="group overflow-hidden rounded-lg border border-[#2E86AB]/25 bg-white/95 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20"
+                >
+                  <div className="relative aspect-video overflow-hidden bg-[#EEF2FF]">
+                    <ProjectVideoFrame project={STATIC_FEATURED_DEMO} />
+                    <span className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#2E86AB] shadow-sm">
+                      Demo
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <div className="truncate text-sm font-bold text-gray-900">
+                      {STATIC_FEATURED_DEMO.name}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-500">{STATIC_FEATURED_DEMO.createdAt}</span>
+                      <span className="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                        {STATIC_FEATURED_DEMO.detections.length} detections
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
+          )}
+
+          {!hasProjectResults && (
+            <div className="mt-3 rounded-lg border border-dashed border-[#D1D5DB] bg-white/70 p-6 text-sm text-gray-500">
+              No projects found for "{projectSearch.trim()}".
+            </div>
+          )}
         </div>
 
-        <div className="space-y-4 lg:col-span-2">
-          <div className="space-y-3">
-            <StatCard
-              icon={Target}
-              label="Model Accuracy"
-              value="92%"
-            />
+        <div className="lg:col-span-2">
+          <section className="rounded-lg border border-[#E5E7EB] bg-white/80 p-5">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Model overview</h2>
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Current corrosion detection model configuration.
+                </p>
+              </div>
+              <span className="shrink-0 rounded-md bg-[#E8F6F3] px-2.5 py-1 text-xs font-semibold text-[#1f6f63]">
+                Active
+              </span>
+            </div>
 
-            <StatCard
-              icon={Film}
-              label="Frames Analysed"
-              value="1,240 / 1,350"
-            />
+            <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white sm:grid-cols-3 sm:divide-x sm:divide-[#F0F2F7]">
+              <StatCard icon={Target} label="Model Accuracy" value="92%" />
+              <StatCard icon={Film} label="Frames Analysed" value="1,240 / 1,350" />
+              <StatCard icon={AlertTriangle} label="Defects Marked" value="347" />
+            </div>
 
-            <StatCard
-              icon={AlertTriangle}
-              label="Defects Marked"
-              value="347"
-            />
-          </div>
-
-          <div className="rounded-lg border border-[#E5E7EB] bg-white p-6">
-            <h2 className="mb-3 text-base font-bold text-gray-900">
-              Model Information
-            </h2>
-
-            <p className="mb-4 text-xs leading-relaxed text-gray-600">
+            <p className="mt-5 rounded-lg bg-[#F8FAFC] p-4 text-sm leading-6 text-gray-600">
               This pre-trained model detects and labels corrosion
               across video footage. The AI scans each frame, flags
               defects, and prioritises by severity level.
             </p>
 
-            <div className="divide-y divide-[#F0F2F7]">
+            <div className="mt-4 divide-y divide-[#F0F2F7] rounded-lg border border-[#E5E7EB] bg-white px-4">
               <MetaRow
                 label="Project Name"
                 value="Project_corrosion_video"
@@ -287,7 +426,7 @@ function CorrosionModelPage() {
               <MetaRow label="Algorithm" value="YOLOv11" />
               <MetaRow label="Created" value="08 Feb 2026" />
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
@@ -455,6 +594,15 @@ const ANALYSE_END = 90;
 const BUILD_END = 98;
 const DONE = 100;
 
+type InspectionAnalysisResult = {
+  id: string;
+  userId: string | null;
+  videoURL: string;
+  duration: number;
+  detections: Detection[];
+  framesAnalysed: number;
+};
+
 function NewProjectModal({
   onClose,
 }: {
@@ -477,6 +625,11 @@ function NewProjectModal({
   const [eta, setEta] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dotStep, setDotStep] = useState(0);
+  const [analysisResult, setAnalysisResult] = useState<InspectionAnalysisResult | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
+  const [showAnalysisProgress, setShowAnalysisProgress] = useState(false);
+  const analysisPromiseRef = useRef<Promise<InspectionAnalysisResult> | null>(null);
+  const analysisRunIdRef = useRef(0);
 
   // Cycle blank → . → .. → ... → blank while analysing.
   useEffect(() => {
@@ -583,10 +736,27 @@ function NewProjectModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  const processing = phase !== "idle";
+  const analysisActive = phase !== "idle";
+  const projectNameReady = projectName.trim().length > 0;
 
   const onFileChange = (f: File | null) => {
     if (!f) return;
+
+    if (f.size > MAX_UPLOAD_BYTES) {
+      setFile(null);
+      setUploadProgress(0);
+      setError(`File is too large. Maximum upload size is ${MAX_UPLOAD_MB}MB.`);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    setError(null);
+    setAnalysisResult(null);
+    setShowAnalysisProgress(false);
+    setEta(null);
+    setAnalyseStatus({ done: 0, total: 0 });
     setFile(f);
     setUploadProgress(0);
 
@@ -596,33 +766,40 @@ function NewProjectModal({
       setUploadProgress(pct);
       if (pct >= 100) clearInterval(id);
     }, 60);
+
+    const runId = analysisRunIdRef.current + 1;
+    analysisRunIdRef.current = runId;
+    const analysisPromise = analyseFile(f, runId);
+    analysisPromiseRef.current = analysisPromise;
+    analysisPromise
+      .then((result) => {
+        if (analysisRunIdRef.current === runId) {
+          setAnalysisResult(result);
+        }
+      })
+      .catch((e: unknown) => {
+        if (analysisRunIdRef.current === runId) {
+          setError(e instanceof Error ? e.message : "Processing failed");
+          setPhase("idle");
+        }
+      });
   };
 
   const sizeMb = file ? `${(file.size / 1_000_000).toFixed(1)} MB` : "";
-  const ready = !!file && uploadProgress === 100 && !processing;
+  const ready = !!file && uploadProgress === 100 && projectNameReady && !finalizing && !error;
 
-  const startInspection = async () => {
-    if (!file) return;
-
-    setError(null);
-    setEta(null);
-
-    try {
+  const analyseFile = async (videoFile: File, runId: number): Promise<InspectionAnalysisResult> => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const isLoggedIn = !!session?.user;
+      const userId = session?.user?.id ?? null;
 
       setPhase("extracting");
 
-      const { frames, duration, videoURL } = await extractFrames(file);
+      const { frames, duration, videoURL } = await extractFrames(videoFile);
 
       const id = String(Date.now());
-
-      const uploadPromise = isLoggedIn
-        ? uploadVideo(file, id).catch(() => videoURL)
-        : Promise.resolve(videoURL);
 
       setPhase("analysing");
 
@@ -671,22 +848,70 @@ function NewProjectModal({
 
       setPhase("building");
 
-      const projName = projectName.trim() || file.name.replace(/\.[^.]+$/, "");
       const finalized = finalizeCorrosionDetections(detections);
-      const finalVideoURL = await uploadPromise;
 
-      projectsStore.add({
+      if (analysisRunIdRef.current !== runId) {
+        throw new Error("Analysis was replaced by a newer upload.");
+      }
+
+      return {
         id,
+        userId,
+        videoURL,
+        duration,
+        detections: finalized,
+        framesAnalysed: frames.length,
+      };
+  };
+
+  const startInspection = async () => {
+    if (!file) return;
+
+    const projName = projectName.trim();
+    if (!projName) {
+      setError("Project name is required.");
+      return;
+    }
+
+    setError(null);
+    setFinalizing(true);
+    setShowAnalysisProgress(true);
+
+    try {
+      const [result] = await Promise.all([
+        analysisResult ?? analysisPromiseRef.current,
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+
+      if (!result) {
+        throw new Error("Analysis has not started yet.");
+      }
+
+      const project = {
+        id: result.id,
         name: projName,
         description,
-        videoURL: finalVideoURL,
+        videoURL: result.videoURL,
         createdAt: formatCreatedAt(),
-        detections: finalized,
+        detections: result.detections,
         status: "Completed",
-        duration,
+        duration: result.duration,
         fileName: file.name,
-        framesAnalysed: frames.length,
-      } as Project);
+        framesAnalysed: result.framesAnalysed,
+      } as Project;
+
+      projectsStore.add(project, { persist: false });
+
+      if (result.userId) {
+        void (async () => {
+          try {
+            const finalVideoURL = await uploadVideo(file, result.id);
+            await projectsStore.add({ ...project, videoURL: finalVideoURL }, { userId: result.userId });
+          } catch (err) {
+            console.warn("Video upload failed, project kept in this browser session:", err);
+          }
+        })();
+      }
 
       // Let the bar animate to BUILD_END, then snap to 100 % and close.
       await new Promise((r) => setTimeout(r, 600));
@@ -700,11 +925,12 @@ function NewProjectModal({
 
       navigate({
         to: "/models/corrosion/$projectId",
-        params: { projectId: id },
+        params: { projectId: result.id },
       });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Processing failed");
-      setPhase("idle");
+    } finally {
+      setFinalizing(false);
     }
   };
 
@@ -715,23 +941,25 @@ function NewProjectModal({
       ? "Extracting frames..."
       : phase === "analysing"
         ? analyseStatus.done === 0
-          ? `Connecting to AI model · this may take up to 20s on first run${animDots}`
+          ? `Connecting to AI model${animDots}`
           : `Analysing frame ${analyseStatus.done} of ${analyseStatus.total}${animDots}`
         : phase === "building"
-          ? "Building results..."
+          ? analysisResult
+            ? "Analysis ready"
+            : "Building results..."
           : "";
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={processing ? undefined : onClose}
+      onClick={finalizing ? undefined : onClose}
     >
       <div
         className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={processing ? undefined : onClose}
+          onClick={finalizing ? undefined : onClose}
           className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
           aria-label="Close"
         >
@@ -766,7 +994,7 @@ function NewProjectModal({
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              disabled={processing}
+              disabled={analysisActive || finalizing}
               className="rounded-lg bg-[#2E9E8F] px-5 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-[#268579] disabled:opacity-50"
             >
               Browse Files
@@ -805,14 +1033,19 @@ function NewProjectModal({
           <div className="mt-6 space-y-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-gray-700">
-                Project Name
+                Project Name <span className="text-[#2E9E8F]">*</span>
               </label>
 
               <input
                 type="text"
                 value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                disabled={processing}
+                onChange={(e) => {
+                  setProjectName(e.target.value);
+                  if (error === "Project name is required.") {
+                    setError(null);
+                  }
+                }}
+                disabled={finalizing}
                 placeholder="e.g. Pipeline_Inspection_02"
                 className="h-10 w-full rounded-md border border-[#E5E7EB] px-3 text-sm focus:border-[#2E86AB] focus:outline-none"
               />
@@ -827,14 +1060,14 @@ function NewProjectModal({
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                disabled={processing}
+                disabled={finalizing}
                 placeholder="Optional notes about this inspection"
                 className="h-10 w-full rounded-md border border-[#E5E7EB] px-3 text-sm focus:border-[#2E86AB] focus:outline-none"
               />
             </div>
           </div>
 
-          {processing && (
+          {showAnalysisProgress && analysisActive && (
             <div className="mt-6">
               <div className="mb-2">
                 <span className="text-xs text-gray-700">{phaseLabel}</span>
@@ -851,14 +1084,14 @@ function NewProjectModal({
 
           {error && (
             <div className="mt-4 text-xs text-amber-600">
-              {error} — sign in to save projects across sessions.
+              {error}
             </div>
           )}
 
           <div className="mt-6 flex items-center justify-end gap-2">
             <button
               onClick={onClose}
-              disabled={processing}
+              disabled={finalizing}
               className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
@@ -873,7 +1106,7 @@ function NewProjectModal({
                   : "cursor-not-allowed bg-gray-200 text-gray-400"
               }`}
             >
-              {processing ? "Processing..." : "Start Inspection"}
+              {finalizing ? "Opening..." : "Start Inspection"}
             </button>
           </div>
         </div>
@@ -892,24 +1125,24 @@ function StatCard({
   value: string;
 }) {
   return (
-    <div className="group flex items-center gap-4 rounded-xl border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/35 hover:bg-white hover:shadow-[0_12px_28px_rgba(15,23,42,0.07)] hover:ring-1 hover:ring-[#2E86AB]/10">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
-        <Icon className="h-5 w-5 text-[#2E86AB]" />
+    <div className="p-4">
+      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF2FF]">
+        <Icon className="h-4 w-4 text-[#2E86AB]" />
       </div>
 
-      <div>
-        <div className="text-xs font-medium text-gray-500">{label}</div>
-        <div className="text-lg font-bold text-gray-900">{value}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        {label}
       </div>
+      <div className="mt-1 text-base font-semibold leading-tight text-gray-800">{value}</div>
     </div>
   );
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-3 text-sm">
+    <div className="flex items-center justify-between gap-4 py-3 text-sm">
       <span className="text-gray-500">{label}</span>
-      <span className="font-medium text-gray-900">{value}</span>
+      <span className="text-right font-semibold text-gray-800">{value}</span>
     </div>
   );
 }
