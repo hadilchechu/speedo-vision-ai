@@ -1,10 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
-import type { ComponentType } from "react";
 import {
-  Target,
-  Film,
-  AlertTriangle,
   Search,
   Folder,
   ChevronRight,
@@ -379,16 +375,13 @@ function CorrosionModelPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white sm:grid-cols-3 sm:divide-x sm:divide-[#F0F2F7]">
-              <StatCard icon={Target} label="Model Accuracy" value="92%" />
-              <StatCard icon={Film} label="Frames Analysed" value="1,240 / 1,350" />
-              <StatCard icon={AlertTriangle} label="Defects Marked" value="347" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <StatCard label="Model Accuracy" value="92%" />
+              <StatCard label="Frames Analysed" value="824 / 838" />
+              <StatCard label="Defects Marked" value="347" />
             </div>
 
-            <p className="mt-5 rounded-lg bg-[#F8FAFC] p-4 text-sm leading-6 text-gray-600">
-              This pre-trained model detects and labels corrosion across video footage. The AI scans
-              each frame, flags defects, and prioritises by severity level.
-            </p>
+            
 
             <div className="mt-4 divide-y divide-[#F0F2F7] rounded-lg border border-[#E5E7EB] bg-white px-4">
               <MetaRow label="Project Name" value="Project_corrosion_video" />
@@ -396,6 +389,10 @@ function CorrosionModelPage() {
               <MetaRow label="Algorithm" value="YOLOv11" />
               <MetaRow label="Created" value="08 Feb 2026" />
             </div>
+            <p className="mt-3 rounded-lg bg-[#F8FAFC] p-1 text-sm leading-6 text-gray-600">
+              This pre-trained model detects and labels corrosion across video footage. The AI scans
+              each frame, flags defects, and prioritises by severity level.
+            </p>
           </section>
         </div>
       </div>
@@ -1073,23 +1070,11 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-4">
-      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF2FF]">
-        <Icon className="h-4 w-4 text-[#2E86AB]" />
-      </div>
-
+    <div className="rounded-lg border border-[#E5E7EB] bg-[#FAFBFC] px-4 py-3">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
-      <div className="mt-1 text-base font-semibold leading-tight text-gray-800">{value}</div>
+      <div className="mt-1.5 text-lg font-semibold leading-tight text-gray-800">{value}</div>
     </div>
   );
 }
