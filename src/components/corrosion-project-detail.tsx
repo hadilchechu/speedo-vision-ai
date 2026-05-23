@@ -10,12 +10,20 @@ import {
   MoreHorizontal,
   Maximize,
   X,
+  Cloud,
+  HardDrive,
+  Loader2,
 } from "lucide-react";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProjectActionGroup } from "@/components/cloud-project-actions";
 import { InspectionSummary, VideoFrameSnapshot } from "@/components/frame-panels";
-import { formatTimestamp, type Detection, type Project } from "@/lib/projects-store";
+import {
+  formatTimestamp,
+  type Detection,
+  type Project,
+  type ProjectSaveState,
+} from "@/lib/projects-store";
 
 type ReviewStatus = "confirmed" | "dismissed" | "pending";
 
@@ -48,8 +56,9 @@ export function CorrosionProjectDetail({
       <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">{project.name}</h1>
-          <div className="mt-1 text-sm text-gray-500">
-            Corrosion Detection — Video · {project.createdAt}
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+            <span>Corrosion Detection — Video · {project.createdAt}</span>
+            <SaveStateBadge state={project.saveState} />
           </div>
         </div>
         <ProjectActionGroup project={displayProject} detections={detections} activeTab={active} />
@@ -83,6 +92,44 @@ export function CorrosionProjectDetail({
       )}
       {active === "Predictions" && <PredictionsTab key={project.id} project={displayProject} />}
     </AppShell>
+  );
+}
+
+function SaveStateBadge({ state }: { state?: ProjectSaveState }) {
+  if (!state) return null;
+
+  const badge = {
+    cloud: {
+      label: "Saved to cloud",
+      Icon: Cloud,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    saving: {
+      label: "Saving to cloud...",
+      Icon: Loader2,
+      className: "border-sky-200 bg-sky-50 text-sky-700",
+    },
+    local: {
+      label: "Stored in this browser",
+      Icon: HardDrive,
+      className: "border-slate-200 bg-slate-50 text-slate-600",
+    },
+    failed: {
+      label: "Stored in this browser",
+      Icon: HardDrive,
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    },
+  }[state];
+
+  const { Icon } = badge;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.className}`}
+    >
+      <Icon className={`h-3.5 w-3.5 ${state === "saving" ? "animate-spin" : ""}`} />
+      {badge.label}
+    </span>
   );
 }
 
@@ -145,10 +192,7 @@ function detectionsNearPlayhead(
   windowSec = OVERLAY_TIME_WINDOW_SEC,
 ): TimelineDetection[] {
   const near = detections.filter((d) => Math.abs(d.timestamp - t) <= windowSec);
-  near.sort(
-    (a, b) =>
-      Math.abs(a.timestamp - t) - Math.abs(b.timestamp - t) || a.id - b.id,
-  );
+  near.sort((a, b) => Math.abs(a.timestamp - t) - Math.abs(b.timestamp - t) || a.id - b.id);
   return near;
 }
 
@@ -208,6 +252,7 @@ function TimelineTab({
     ),
   );
   const [playing, setPlaying] = useState(false);
+  const [expandedVideo, setExpandedVideo] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const initialSeekDoneRef = useRef(false);
@@ -337,6 +382,19 @@ function TimelineTab({
     return () => cancelAnimationFrame(id);
   }, [playing]);
 
+  useEffect(() => {
+    if (!expandedVideo) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpandedVideo(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [expandedVideo]);
+
   if (detections.length === 0) {
     return (
       <div className="rounded-lg border border-[#E5E7EB] bg-white p-10 text-center text-sm text-gray-600">
@@ -357,10 +415,36 @@ function TimelineTab({
 
   const progressPct = project.duration ? (currentTime / project.duration) * 100 : 0;
 
+  const videoCardClasses = expandedVideo
+    ? "fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(80vw,1400px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-2xl"
+    : "rounded-lg border border-[#E5E7EB] bg-white p-4";
+
   return (
     <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-      <div className="space-y-4 lg:sticky lg:top-8 lg:col-span-2">
-        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4">
+      {expandedVideo ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 cursor-default bg-slate-950/55 backdrop-blur-sm"
+          aria-label="Close enlarged video"
+          onClick={() => setExpandedVideo(false)}
+        />
+      ) : null}
+      <div
+        className={`space-y-4 lg:sticky lg:top-8 lg:col-span-2 ${
+          expandedVideo ? "relative z-50" : ""
+        }`}
+      >
+        <div className={videoCardClasses}>
+          {expandedVideo ? (
+            <button
+              type="button"
+              onClick={() => setExpandedVideo(false)}
+              className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-gray-600 shadow-lg transition-colors hover:bg-gray-100 hover:text-gray-900"
+              aria-label="Close enlarged video"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
           <div
             className="relative w-full overflow-hidden rounded-md bg-[#1f2937]"
             style={{ aspectRatio: "16/9" }}
@@ -433,12 +517,17 @@ function TimelineTab({
             </div>
             <button
               type="button"
+              onClick={() => setExpandedVideo(true)}
               className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#2E86AB]"
-              aria-label="Fullscreen"
+              aria-label="Enlarge video"
             >
               <Maximize className="h-4 w-4" />
             </button>
           </div>
+          <p className="mt-2 px-1 text-[10px] leading-4 text-gray-400">
+            AI detections are generated by an experimental Hugging Face model and may include false
+            results due to model or processing limitations.
+          </p>
           {mediaDurationSec != null && mediaDurationSec + 0.25 < lastDetectionSec ? (
             <p className="mt-3 text-xs text-amber-800">
               This file ends at {formatTimestamp(mediaDurationSec)}, but detections run through{" "}
@@ -469,7 +558,9 @@ function TimelineTab({
               const selected = selectedId === d.id;
               const cardShell = [
                 "cursor-pointer rounded-md p-3 transition",
-                selected ? "border border-[#2E86AB] bg-[#EEF2FF]" : "border border-[#E5E7EB] hover:bg-gray-50",
+                selected
+                  ? "border border-[#2E86AB] bg-[#EEF2FF]"
+                  : "border border-[#E5E7EB] hover:bg-gray-50",
               ].join(" ");
 
               const actionBase =

@@ -37,11 +37,10 @@ import {
 import { STATIC_FEATURED_DEMO } from "@/lib/static-featured-demo";
 
 import { supabase, uploadVideo } from "@/lib/supabase";
+import { MAX_UPLOAD_MB, validateInspectionVideo } from "@/lib/upload-constraints";
 
 const AVG_SECS_PER_FRAME = 7;
 const CONCURRENCY = 2;
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);
 
 export const Route = createFileRoute("/models/corrosion")({
   component: CorrosionModelPage,
@@ -89,10 +88,7 @@ function ProjectVideoFrame({ project }: { project: Project }) {
   );
 }
 
-async function importManifestIntoSession(
-  manifestJson: string,
-  videoFile: File
-): Promise<void> {
+async function importManifestIntoSession(manifestJson: string, videoFile: File): Promise<void> {
   let parsed: unknown;
 
   try {
@@ -118,10 +114,7 @@ async function importManifestIntoSession(
     throw new Error("Invalid manifest: expected detections array.");
   }
 
-  const id =
-    typeof proj.id === "string" && proj.id.length > 0
-      ? proj.id
-      : String(Date.now());
+  const id = typeof proj.id === "string" && proj.id.length > 0 ? proj.id : crypto.randomUUID();
 
   if (projectsStore.get(id)) {
     projectsStore.remove(id);
@@ -147,23 +140,12 @@ async function importManifestIntoSession(
     id,
     name: proj.name,
     videoURL,
-    createdAt:
-      typeof proj.createdAt === "string"
-        ? proj.createdAt
-        : formatCreatedAt(),
+    createdAt: typeof proj.createdAt === "string" ? proj.createdAt : formatCreatedAt(),
     detections: finalizeCorrosionDetections(detections as Detection[]),
-    status:
-      typeof proj.status === "string" ? proj.status : "Completed",
-    duration:
-      typeof proj.duration === "number" ? proj.duration : 0,
-    fileName:
-      typeof proj.fileName === "string"
-        ? proj.fileName
-        : videoFile.name,
-    framesAnalysed:
-      typeof proj.framesAnalysed === "number"
-        ? proj.framesAnalysed
-        : undefined,
+    status: typeof proj.status === "string" ? proj.status : "Completed",
+    duration: typeof proj.duration === "number" ? proj.duration : 0,
+    fileName: typeof proj.fileName === "string" ? proj.fileName : videoFile.name,
+    framesAnalysed: typeof proj.framesAnalysed === "number" ? proj.framesAnalysed : undefined,
   };
 
   projectsStore.add(project, { persist: !!userId, userId });
@@ -187,16 +169,12 @@ function CorrosionModelPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">
-        Corrosion Detection — Video
-      </h1>
+      <h1 className="mb-6 text-2xl font-semibold text-gray-900">Corrosion Detection — Video</h1>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[18px] font-bold text-gray-900">
-              Projects
-            </h2>
+            <h2 className="text-[18px] font-bold text-gray-900">Projects</h2>
 
             <div className="flex items-center gap-2">
               <button
@@ -204,10 +182,7 @@ function CorrosionModelPage() {
                 onClick={() => setOpenImport(true)}
                 className={`${projectsToolbarBtn} border-[#2E86AB] bg-white text-[#2E86AB] hover:bg-[#EEF2FF]`}
               >
-                <FileDown
-                  className="h-4 w-4 shrink-0"
-                  aria-hidden
-                />
+                <FileDown className="h-4 w-4 shrink-0" aria-hidden />
                 Import
               </button>
 
@@ -276,9 +251,7 @@ function CorrosionModelPage() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-gray-900">
-                      {p.name}
-                    </div>
+                    <div className="truncate text-sm font-bold text-gray-900">{p.name}</div>
 
                     <div className="mt-0.5 text-xs text-gray-500">
                       Last inspected: {p.createdAt}
@@ -316,8 +289,7 @@ function CorrosionModelPage() {
                     </div>
 
                     <div className="mt-0.5 text-xs text-gray-500">
-                      Video and analysis ship with this deploy ·{" "}
-                      {STATIC_FEATURED_DEMO.createdAt}
+                      Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}
                     </div>
                   </div>
 
@@ -373,7 +345,9 @@ function CorrosionModelPage() {
                       {STATIC_FEATURED_DEMO.name}
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-2">
-                      <span className="text-xs text-gray-500">{STATIC_FEATURED_DEMO.createdAt}</span>
+                      <span className="text-xs text-gray-500">
+                        {STATIC_FEATURED_DEMO.createdAt}
+                      </span>
                       <span className="rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
                         {STATIC_FEATURED_DEMO.detections.length} detections
                       </span>
@@ -412,16 +386,12 @@ function CorrosionModelPage() {
             </div>
 
             <p className="mt-5 rounded-lg bg-[#F8FAFC] p-4 text-sm leading-6 text-gray-600">
-              This pre-trained model detects and labels corrosion
-              across video footage. The AI scans each frame, flags
-              defects, and prioritises by severity level.
+              This pre-trained model detects and labels corrosion across video footage. The AI scans
+              each frame, flags defects, and prioritises by severity level.
             </p>
 
             <div className="mt-4 divide-y divide-[#F0F2F7] rounded-lg border border-[#E5E7EB] bg-white px-4">
-              <MetaRow
-                label="Project Name"
-                value="Project_corrosion_video"
-              />
+              <MetaRow label="Project Name" value="Project_corrosion_video" />
               <MetaRow label="Type" value="Object Detection" />
               <MetaRow label="Algorithm" value="YOLOv11" />
               <MetaRow label="Created" value="08 Feb 2026" />
@@ -430,11 +400,7 @@ function CorrosionModelPage() {
         </div>
       </div>
 
-      {openNew && (
-        <NewProjectModal
-          onClose={() => setOpenNew(false)}
-        />
-      )}
+      {openNew && <NewProjectModal onClose={() => setOpenNew(false)} />}
 
       {openImport && (
         <ImportProjectModal
@@ -446,13 +412,7 @@ function CorrosionModelPage() {
   );
 }
 
-function ImportProjectModal({
-  onClose,
-  onDone,
-}: {
-  onClose: () => void;
-  onDone: () => void;
-}) {
+function ImportProjectModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const manifestRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
@@ -463,9 +423,7 @@ function ImportProjectModal({
     const vf = videoRef.current?.files?.[0];
 
     if (!mf || !vf) {
-      toast.error(
-        "Choose both an export JSON file and the matching video file."
-      );
+      toast.error("Choose both an export JSON file and the matching video file.");
       return;
     }
 
@@ -480,9 +438,7 @@ function ImportProjectModal({
 
       onDone();
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : "Import failed"
-      );
+      toast.error(e instanceof Error ? e.message : "Import failed");
     } finally {
       setBusy(false);
     }
@@ -506,13 +462,11 @@ function ImportProjectModal({
           <X className="h-5 w-5" />
         </button>
 
-        <h2 className="mb-2 text-lg font-semibold text-gray-900">
-          Import project
-        </h2>
+        <h2 className="mb-2 text-lg font-semibold text-gray-900">Import project</h2>
 
         <p className="mb-4 text-xs text-gray-600">
-          Use the <strong>Export JSON</strong> file from another
-          deployment, plus the same <strong>video</strong> file.
+          Use the <strong>Export JSON</strong> file from another deployment, plus the same{" "}
+          <strong>video</strong> file.
         </p>
 
         <div className="space-y-3">
@@ -530,16 +484,9 @@ function ImportProjectModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">
-              Video (.mp4)
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Video (.mp4)</label>
 
-            <input
-              ref={videoRef}
-              type="file"
-              accept="video/*"
-              className="block w-full text-sm"
-            />
+            <input ref={videoRef} type="file" accept="video/*" className="block w-full text-sm" />
           </div>
         </div>
 
@@ -603,11 +550,7 @@ type InspectionAnalysisResult = {
   framesAnalysed: number;
 };
 
-function NewProjectModal({
-  onClose,
-}: {
-  onClose: () => void;
-}) {
+function NewProjectModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -617,9 +560,7 @@ function NewProjectModal({
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
 
-  const [phase, setPhase] = useState<
-    "idle" | "extracting" | "analysing" | "building"
-  >("idle");
+  const [phase, setPhase] = useState<"idle" | "extracting" | "analysing" | "building">("idle");
 
   const [analyseStatus, setAnalyseStatus] = useState({ done: 0, total: 0 });
   const [eta, setEta] = useState<number | null>(null);
@@ -630,10 +571,20 @@ function NewProjectModal({
   const [showAnalysisProgress, setShowAnalysisProgress] = useState(false);
   const analysisPromiseRef = useRef<Promise<InspectionAnalysisResult> | null>(null);
   const analysisRunIdRef = useRef(0);
+  const analysisAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      analysisAbortRef.current?.abort();
+    };
+  }, []);
 
   // Cycle blank → . → .. → ... → blank while analysing.
   useEffect(() => {
-    if (phase !== "analysing") { setDotStep(0); return; }
+    if (phase !== "analysing") {
+      setDotStep(0);
+      return;
+    }
     setDotStep(0);
     const id = setInterval(() => {
       setDotStep((s) => (s + 1) % 4);
@@ -653,9 +604,15 @@ function NewProjectModal({
   const lastTickRef = useRef<number>(0);
 
   // Keep refs in sync with state.
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
-  useEffect(() => { etaRef.current = eta; }, [eta]);
-  useEffect(() => { analyseStatusRef.current = analyseStatus; }, [analyseStatus]);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  useEffect(() => {
+    etaRef.current = eta;
+  }, [eta]);
+  useEffect(() => {
+    analyseStatusRef.current = analyseStatus;
+  }, [analyseStatus]);
 
   // ── rAF loop: runs while processing, keeps bar moving continuously ──────
   useEffect(() => {
@@ -683,15 +640,11 @@ function NewProjectModal({
         const target = EXTRACT_END;
         const speed = target / 1.2; // %/s
         current = Math.min(current + speed * dt, target);
-
       } else if (currentPhase === "analysing") {
         // Frame-based ground truth: where are we really?
         const frameFraction =
-          currentStatus.total > 0
-            ? currentStatus.done / currentStatus.total
-            : 0;
-        const frameTarget =
-          EXTRACT_END + frameFraction * (ANALYSE_END - EXTRACT_END);
+          currentStatus.total > 0 ? currentStatus.done / currentStatus.total : 0;
+        const frameTarget = EXTRACT_END + frameFraction * (ANALYSE_END - EXTRACT_END);
 
         // Time-based advance: how fast should we move given ETA?
         // We want to cover the remaining band in exactly `eta` seconds.
@@ -712,7 +665,6 @@ function NewProjectModal({
         // and it must always advance to at least the frame target.
         const softCap = frameTarget + 5;
         current = Math.min(Math.max(timeBased, frameTarget), softCap, ANALYSE_END);
-
       } else if (currentPhase === "building") {
         // Animate from wherever we are → BUILD_END over ~0.8 s.
         const target = BUILD_END;
@@ -732,8 +684,6 @@ function NewProjectModal({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  // We only want to (re)start the loop when phase changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   const analysisActive = phase !== "idle";
@@ -742,10 +692,13 @@ function NewProjectModal({
   const onFileChange = (f: File | null) => {
     if (!f) return;
 
-    if (f.size > MAX_UPLOAD_BYTES) {
+    const validationError = validateInspectionVideo(f);
+    if (validationError) {
+      analysisRunIdRef.current += 1;
+      analysisAbortRef.current?.abort();
       setFile(null);
       setUploadProgress(0);
-      setError(`File is too large. Maximum upload size is ${MAX_UPLOAD_MB}MB.`);
+      setError(validationError);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -769,7 +722,10 @@ function NewProjectModal({
 
     const runId = analysisRunIdRef.current + 1;
     analysisRunIdRef.current = runId;
-    const analysisPromise = analyseFile(f, runId);
+    analysisAbortRef.current?.abort();
+    const abortController = new AbortController();
+    analysisAbortRef.current = abortController;
+    const analysisPromise = analyseFile(f, runId, abortController.signal);
     analysisPromiseRef.current = analysisPromise;
     analysisPromise
       .then((result) => {
@@ -788,80 +744,85 @@ function NewProjectModal({
   const sizeMb = file ? `${(file.size / 1_000_000).toFixed(1)} MB` : "";
   const ready = !!file && uploadProgress === 100 && projectNameReady && !finalizing && !error;
 
-  const analyseFile = async (videoFile: File, runId: number): Promise<InspectionAnalysisResult> => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+  const analyseFile = async (
+    videoFile: File,
+    runId: number,
+    signal: AbortSignal,
+  ): Promise<InspectionAnalysisResult> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const userId = session?.user?.id ?? null;
+    const userId = session?.user?.id ?? null;
 
-      setPhase("extracting");
+    setPhase("extracting");
 
-      const { frames, duration, videoURL } = await extractFrames(videoFile);
+    const { frames, duration, videoURL } = await extractFrames(videoFile);
 
-      const id = String(Date.now());
+    if (signal.aborted) throw new Error("Analysis was cancelled.");
 
-      setPhase("analysing");
+    const id = crypto.randomUUID();
 
-      // Seed the ETA from a static estimate before the first batch returns.
-      const initialEta = Math.ceil(
-        (frames.length / CONCURRENCY) * AVG_SECS_PER_FRAME
+    setPhase("analysing");
+
+    // Seed the ETA from a static estimate before the first batch returns.
+    const initialEta = Math.ceil((frames.length / CONCURRENCY) * AVG_SECS_PER_FRAME);
+    setEta(initialEta);
+    setAnalyseStatus({ done: 0, total: frames.length });
+
+    const detections: Detection[] = [];
+    let done = 0;
+    const startTime = Date.now();
+
+    for (let i = 0; i < frames.length; i += CONCURRENCY) {
+      const batch = frames.slice(i, i + CONCURRENCY);
+
+      const results = await Promise.all(
+        batch.map(async (fr) => {
+          try {
+            const json = await detectFrame(fr.blob, signal);
+            return normalizeDetections(json, fr.timestamp);
+          } catch {
+            if (signal.aborted) throw new Error("Analysis was cancelled.");
+            return [];
+          }
+        }),
       );
-      setEta(initialEta);
-      setAnalyseStatus({ done: 0, total: frames.length });
 
-      const detections: Detection[] = [];
-      let done = 0;
-      const startTime = Date.now();
-
-      for (let i = 0; i < frames.length; i += CONCURRENCY) {
-        const batch = frames.slice(i, i + CONCURRENCY);
-
-        const results = await Promise.all(
-          batch.map(async (fr) => {
-            try {
-              const json = await detectFrame(fr.blob);
-              return normalizeDetections(json, fr.timestamp);
-            } catch {
-              return [];
-            }
-          })
-        );
-
-        for (const result of results) {
-          if (result.length > 0) detections.push(...result);
-        }
-
-        done += batch.length;
-        setAnalyseStatus({ done, total: frames.length });
-
-        // Recompute ETA from actual elapsed time after each batch.
-        if (done < frames.length) {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const avgPerFrame = elapsed / done;
-          const remaining = Math.ceil(avgPerFrame * (frames.length - done));
-          setEta(remaining);
-        } else {
-          setEta(null);
-        }
+      for (const result of results) {
+        if (result.length > 0) detections.push(...result);
       }
 
-      setPhase("building");
+      done += batch.length;
+      setAnalyseStatus({ done, total: frames.length });
 
-      const finalized = finalizeCorrosionDetections(detections);
-
-      if (analysisRunIdRef.current !== runId) {
-        throw new Error("Analysis was replaced by a newer upload.");
+      // Recompute ETA from actual elapsed time after each batch.
+      if (done < frames.length) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const avgPerFrame = elapsed / done;
+        const remaining = Math.ceil(avgPerFrame * (frames.length - done));
+        setEta(remaining);
+      } else {
+        setEta(null);
       }
+    }
 
-      return {
-        id,
-        userId,
-        videoURL,
-        duration,
-        detections: finalized,
-        framesAnalysed: frames.length,
-      };
+    setPhase("building");
+
+    const finalized = finalizeCorrosionDetections(detections);
+
+    if (analysisRunIdRef.current !== runId) {
+      throw new Error("Analysis was replaced by a newer upload.");
+    }
+
+    return {
+      id,
+      userId,
+      videoURL,
+      duration,
+      detections: finalized,
+      framesAnalysed: frames.length,
+    };
   };
 
   const startInspection = async () => {
@@ -887,6 +848,10 @@ function NewProjectModal({
         throw new Error("Analysis has not started yet.");
       }
 
+      if (analysisAbortRef.current?.signal.aborted) {
+        throw new Error("Analysis was cancelled.");
+      }
+
       const project = {
         id: result.id,
         name: projName,
@@ -898,6 +863,7 @@ function NewProjectModal({
         duration: result.duration,
         fileName: file.name,
         framesAnalysed: result.framesAnalysed,
+        saveState: result.userId ? "saving" : "local",
       } as Project;
 
       projectsStore.add(project, { persist: false });
@@ -906,9 +872,13 @@ function NewProjectModal({
         void (async () => {
           try {
             const finalVideoURL = await uploadVideo(file, result.id);
-            await projectsStore.add({ ...project, videoURL: finalVideoURL }, { userId: result.userId });
+            await projectsStore.add(
+              { ...project, videoURL: finalVideoURL, saveState: "cloud" },
+              { userId: result.userId },
+            );
           } catch (err) {
             console.warn("Video upload failed, project kept in this browser session:", err);
+            projectsStore.add({ ...project, saveState: "failed" }, { persist: false });
           }
         })();
       }
@@ -967,21 +937,17 @@ function NewProjectModal({
         </button>
 
         <div className="p-6">
-          <h2 className="mb-5 text-xl font-semibold text-gray-900">
-            New Inspection Project
-          </h2>
+          <h2 className="mb-5 text-xl font-semibold text-gray-900">New Inspection Project</h2>
 
           <div className="rounded-2xl border-2 border-dashed border-[#2E9E8F]/50 bg-[#F0FBF9] p-8 text-center">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white">
               <UploadCloud className="h-7 w-7 text-[#2E9E8F]" />
             </div>
 
-            <div className="mb-1 text-base font-semibold text-gray-900">
-              Upload your video file
-            </div>
+            <div className="mb-1 text-base font-semibold text-gray-900">Upload your video file</div>
 
             <div className="mb-4 text-xs text-gray-500">
-              Supports MP4, MOV, AVI up to 50MB
+              Supports MP4, MOV, AVI, WebM up to {MAX_UPLOAD_MB}MB
             </div>
 
             <input
@@ -1003,9 +969,7 @@ function NewProjectModal({
             {file && (
               <div className="mx-auto mt-5 max-w-md rounded-xl border border-[#E5E7EB] bg-white p-3 text-left">
                 <div className="mb-2 flex items-center justify-between text-xs">
-                  <span className="truncate font-semibold text-gray-900">
-                    {file.name}
-                  </span>
+                  <span className="truncate font-semibold text-gray-900">{file.name}</span>
                   <span className="ml-2 shrink-0 text-gray-500">{sizeMb}</span>
                 </div>
 
@@ -1052,9 +1016,7 @@ function NewProjectModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-700">
-                Description
-              </label>
+              <label className="mb-1 block text-xs font-semibold text-gray-700">Description</label>
 
               <input
                 type="text"
@@ -1082,11 +1044,7 @@ function NewProjectModal({
             </div>
           )}
 
-          {error && (
-            <div className="mt-4 text-xs text-amber-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="mt-4 text-xs text-amber-600">{error}</div>}
 
           <div className="mt-6 flex items-center justify-end gap-2">
             <button
@@ -1130,9 +1088,7 @@ function StatCard({
         <Icon className="h-4 w-4 text-[#2E86AB]" />
       </div>
 
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-        {label}
-      </div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
       <div className="mt-1 text-base font-semibold leading-tight text-gray-800">{value}</div>
     </div>
   );

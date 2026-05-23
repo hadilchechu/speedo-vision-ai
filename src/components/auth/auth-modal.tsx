@@ -20,8 +20,7 @@ export function AuthModal({ open, onClose }: { open: boolean; onClose: () => voi
     if (busy) return;
     setBusy(true);
     try {
-      const { error } = await signInWithGoogle();
-      if (error) throw error;
+      await signInWithGoogle();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not start Google sign in.");
       setBusy(false);

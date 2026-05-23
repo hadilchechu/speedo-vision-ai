@@ -71,8 +71,7 @@ function detectionsNearTime(
     .filter((d) => Math.abs(d.timestamp - time) <= windowSec)
     .sort(
       (a, b) =>
-        Math.abs(a.timestamp - time) - Math.abs(b.timestamp - time) ||
-        b.confidence - a.confidence,
+        Math.abs(a.timestamp - time) - Math.abs(b.timestamp - time) || b.confidence - a.confidence,
     );
 }
 
@@ -165,7 +164,11 @@ export async function exportAnnotatedCorrosionVideo(project: Project): Promise<v
     throw new Error("Canvas is not available in this browser.");
   }
 
-  const supportsManualFrames = "requestVideoFrameCallback" in video;
+  const requestVideoFrame =
+    "requestVideoFrameCallback" in video ? video.requestVideoFrameCallback.bind(video) : null;
+  const cancelVideoFrame =
+    "cancelVideoFrameCallback" in video ? video.cancelVideoFrameCallback.bind(video) : null;
+  const supportsManualFrames = !!requestVideoFrame;
   const stream = canvas.captureStream(supportsManualFrames ? 0 : FALLBACK_EXPORT_FPS);
   const videoTrack = stream.getVideoTracks()[0] as
     | (MediaStreamTrack & { requestFrame?: () => void })
@@ -190,8 +193,10 @@ export async function exportAnnotatedCorrosionVideo(project: Project): Promise<v
   let rafId = 0;
   const paintManualFrame = () => {
     drawAnnotatedFrame(ctx, video, project.detections);
-    videoTrack?.requestFrame();
-    frameCallbackId = video.requestVideoFrameCallback(paintManualFrame);
+    videoTrack?.requestFrame?.();
+    if (requestVideoFrame) {
+      frameCallbackId = requestVideoFrame(paintManualFrame);
+    }
   };
   const paintFallbackFrame = () => {
     drawAnnotatedFrame(ctx, video, project.detections);
@@ -209,11 +214,11 @@ export async function exportAnnotatedCorrosionVideo(project: Project): Promise<v
     });
 
     drawAnnotatedFrame(ctx, video, project.detections);
-    videoTrack?.requestFrame();
+    videoTrack?.requestFrame?.();
 
     recorder.start(250);
-    if (supportsManualFrames) {
-      frameCallbackId = video.requestVideoFrameCallback(paintManualFrame);
+    if (requestVideoFrame) {
+      frameCallbackId = requestVideoFrame(paintManualFrame);
     } else {
       rafId = requestAnimationFrame(paintFallbackFrame);
     }
@@ -234,7 +239,7 @@ export async function exportAnnotatedCorrosionVideo(project: Project): Promise<v
     const blob = await recording;
     downloadBlob(blob, `${safeFileSlug(project.name)}_annotated.${extension}`);
   } finally {
-    if (frameCallbackId) video.cancelVideoFrameCallback(frameCallbackId);
+    if (frameCallbackId && cancelVideoFrame) cancelVideoFrame(frameCallbackId);
     if (rafId) cancelAnimationFrame(rafId);
     if (recorder.state !== "inactive") recorder.stop();
     stopStream(stream);

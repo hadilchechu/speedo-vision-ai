@@ -2,6 +2,9 @@ import type { Detection } from "./projects-store";
 
 /** Seconds between sampled frames for corrosion inference (smaller = denser timeline, more API calls). */
 export const CORROSION_SAMPLE_INTERVAL_SEC = 2;
+export const CORROSION_MAX_ANALYSIS_FRAMES = 90;
+const DETECTION_TIMEOUT_MS = 30_000;
+const DETECTION_RETRY_DELAY_MS = 900;
 
 /**
  * IoU threshold for per-timestamp NMS: if two boxes overlap at least this much, the lower-confidence
@@ -16,10 +19,32 @@ export const CORROSION_NMS_IOU_THRESHOLD = 0.45;
 export const CORROSION_SPATIAL_MERGE_IOU_THRESHOLD = 0.4;
 
 export type Frame = { blob: Blob; timestamp: number };
+type ApiDetectionResponse = {
+  detections?: unknown;
+  image_width?: unknown;
+  image_height?: unknown;
+};
+type ApiDetection = Record<string, unknown>;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && !Array.isArray(value) && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function boxValue(rawBox: unknown, keys: string[], index: number): unknown {
+  if (Array.isArray(rawBox)) return rawBox[index];
+  const record = asRecord(rawBox);
+  for (const key of keys) {
+    if (record[key] !== undefined) return record[key];
+  }
+  return undefined;
+}
 
 export async function extractFrames(
   videoFile: File,
   intervalSec = CORROSION_SAMPLE_INTERVAL_SEC,
+  maxFrames = CORROSION_MAX_ANALYSIS_FRAMES,
 ): Promise<{ frames: Frame[]; duration: number; videoURL: string }> {
   const videoURL = URL.createObjectURL(videoFile);
   const video = document.createElement("video");
@@ -33,9 +58,22 @@ export async function extractFrames(
   });
   const duration = video.duration;
   const frames: Frame[] = [];
-  for (let t = 0; t < duration; t += intervalSec) {
+  const estimatedFrameCount = Math.max(1, Math.ceil(duration / intervalSec));
+  const effectiveIntervalSec =
+    estimatedFrameCount > maxFrames ? Math.max(intervalSec, duration / maxFrames) : intervalSec;
+  const timestamps: number[] = [];
+
+  for (let t = 0; t < duration; t += effectiveIntervalSec) {
+    timestamps.push(Math.min(t, Math.max(0, duration - 0.05)));
+    if (timestamps.length >= maxFrames) break;
+  }
+
+  for (const t of timestamps) {
     await new Promise<void>((r) => {
-      const onSeeked = () => { video.removeEventListener("seeked", onSeeked); r(); };
+      const onSeeked = () => {
+        video.removeEventListener("seeked", onSeeked);
+        r();
+      };
       video.addEventListener("seeked", onSeeked);
       video.currentTime = t;
     });
@@ -51,30 +89,73 @@ export async function extractFrames(
 
 const API_URL = "https://hadilc-speedo-vision-api.hf.space/detect";
 
-export async function detectFrame(blob: Blob): Promise<any> {
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function requestSignalWithTimeout(signal: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const abort = () => controller.abort();
+
+  signal?.addEventListener("abort", abort, { once: true });
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      globalThis.clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", abort);
+    },
+  };
+}
+
+export async function detectFrame(blob: Blob, signal?: AbortSignal): Promise<ApiDetectionResponse> {
   const formData = new FormData();
   formData.append("file", blob, "frame.jpg");
-  const res = await fetch(API_URL, {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return await res.json();
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const requestSignal = requestSignalWithTimeout(signal, DETECTION_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: formData,
+        signal: requestSignal.signal,
+      });
+
+      if (!res.ok) throw new Error(`AI service returned ${res.status}.`);
+      return await res.json();
+    } catch (error) {
+      if (signal?.aborted || attempt === 1) throw error;
+      await wait(DETECTION_RETRY_DELAY_MS);
+    } finally {
+      requestSignal.cleanup();
+    }
+  }
+
+  throw new Error("AI service did not return a response.");
 }
 
 // Normalize an API detection into our Detection shape.
 // API box may be in pixels or normalized; we coerce to percentage 0-100.
-export function normalizeDetections(apiJson: any, timestamp: number, imgW?: number, imgH?: number): Detection[] {
-  const arr: any[] = Array.isArray(apiJson?.detections) ? apiJson.detections : [];
+export function normalizeDetections(
+  apiJson: ApiDetectionResponse,
+  timestamp: number,
+  imgW?: number,
+  imgH?: number,
+): Detection[] {
+  const arr: ApiDetection[] = Array.isArray(apiJson.detections)
+    ? apiJson.detections.filter((item): item is ApiDetection => !!item && typeof item === "object")
+    : [];
   return arr.map((d) => {
     const rawBox = d.box ?? d.bbox ?? {};
-    let x = Number(rawBox.x ?? rawBox.left ?? rawBox[0] ?? 0);
-    let y = Number(rawBox.y ?? rawBox.top ?? rawBox[1] ?? 0);
-    let w = Number(rawBox.width ?? rawBox.w ?? rawBox[2] ?? 0);
-    let h = Number(rawBox.height ?? rawBox.h ?? rawBox[3] ?? 0);
+    let x = Number(boxValue(rawBox, ["x", "left"], 0) ?? 0);
+    let y = Number(boxValue(rawBox, ["y", "top"], 1) ?? 0);
+    let w = Number(boxValue(rawBox, ["width", "w"], 2) ?? 0);
+    let h = Number(boxValue(rawBox, ["height", "h"], 3) ?? 0);
     // If values look like pixels (>1), convert to percent using image size
-    const W = imgW || apiJson?.image_width || 1;
-    const H = imgH || apiJson?.image_height || 1;
+    const W = imgW || Number(apiJson.image_width) || 1;
+    const H = imgH || Number(apiJson.image_height) || 1;
     if (x > 1 || y > 1 || w > 1 || h > 1) {
       if (W > 1 && H > 1) {
         x = (x / W) * 100;
@@ -83,12 +164,16 @@ export function normalizeDetections(apiJson: any, timestamp: number, imgW?: numb
         h = (h / H) * 100;
       }
     } else {
-      x *= 100; y *= 100; w *= 100; h *= 100;
+      x *= 100;
+      y *= 100;
+      w *= 100;
+      h *= 100;
     }
     const conf = Number(d.confidence ?? d.score ?? 0);
+    const label = typeof d.label === "string" && d.label.trim() ? d.label : "Corrosion Detected";
     return {
       timestamp,
-      label: d.label ?? "Corrosion Detected",
+      label,
       confidence: conf <= 1 ? conf * 100 : conf,
       area_percent: Number(d.area_percent ?? d.area ?? (w * h) / 100),
       box: { x, y, width: w, height: h },

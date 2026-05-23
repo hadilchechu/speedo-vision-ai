@@ -48,10 +48,7 @@ function SettingsIllustration() {
 
       {/* floating settings card */}
       <div className="absolute bottom-[-8%] right-[16%] flex h-[18%] w-[18%] items-center justify-center rounded-2xl border border-dashed border-[#9CB8DB]/60 bg-white/20 backdrop-blur-[1px]">
-        <SlidersHorizontal
-          className="h-[42%] w-[42%] text-[#7EA4CC]/70"
-          strokeWidth={1.7}
-        />
+        <SlidersHorizontal className="h-[42%] w-[42%] text-[#7EA4CC]/70" strokeWidth={1.7} />
       </div>
     </div>
   );
@@ -86,10 +83,7 @@ function SettingsPage() {
           <section className="relative z-10 max-w-[640px] pt-2 pl-0">
             <div className="flex items-start gap-6">
               <div className="flex h-[75px] w-[75px] shrink-0 items-center justify-center rounded-[22px] bg-[#EEF2FF]">
-              <Settings
-                className="h-10 w-10 text-[#2E86AB]/90"
-                strokeWidth={1.8}
-                />
+                <Settings className="h-10 w-10 text-[#2E86AB]/90" strokeWidth={1.8} />
               </div>
 
               <div className="pt-1">
@@ -104,8 +98,8 @@ function SettingsPage() {
             </div>
 
             <p className="mt-4 max-w-[700px] text-[16px] leading-[1.5] font-[300] text-[#4B5563]">
-              Organization defaults, API keys, and notification preferences
-              will be configurable here in a future update.
+              Organization defaults, API keys, and notification preferences will be configurable
+              here in a future update.
             </p>
           </section>
 

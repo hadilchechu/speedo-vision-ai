@@ -1,6 +1,6 @@
 # Speedo Vision AI
 
-> AI-powered video inspection platform for industrial corrosion detection — built solo, for free by a UX designer learning full-stack AI development through vibe coding.
+> AI-powered video inspection demo for industrial corrosion detection — built solo, for free by a UX designer learning full-stack AI development through vibe coding.
 
 🔗 **[Live Demo](https://speedo-vision-ai.hadilchechu.workers.dev)** · built with React, TypeScript, Cloudflare Workers, Supabase, and Hugging Face
 
@@ -8,7 +8,7 @@
 
 ## What it does
 
-Speedo Vision AI lets engineers upload pipeline inspection footage and automatically detect corrosion using an AI model. Upload an MP4, the app extracts frames, runs each through a object detection model, and presents results on an interactive timeline with bounding boxes, a predictions grid, severity stats, and a PDF/Video export.
+Speedo Vision AI lets users upload pipeline inspection footage and automatically detect corrosion using an AI model. Upload a video, the app extracts frames, runs each through an object detection model, and presents results on an interactive timeline with bounding boxes, a predictions grid, severity stats, and a PDF/Video export.
 
 ---
 
@@ -19,7 +19,8 @@ I'm a UX designer who wanted to understand how AI products are actually built �
 I challenged myself to build a full-stack AI application completely solo, using AI-assisted coding (Claude, Cursor, Codex) to bridge the gap between design knowledge and engineering. Every architectural decision, every bug, every deployment was mine to figure out.
 
 This project taught me:
-- How to integrate a real ML model from Hugging Face into a production app
+
+- How to integrate a real ML model from Hugging Face into a deployed app
 - How to architect a full-stack app with auth, database, and file storage
 - How vibe coding works in practice — and where it breaks down
 - The gap between designing AI interfaces and building them
@@ -40,16 +41,16 @@ This project taught me:
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, TypeScript, Tailwind CSS, TanStack Router |
-| Backend | Cloudflare Workers |
-| Auth | Supabase Auth (Google OAuth) |
-| Database | Supabase Postgres (with row-level security) |
-| File storage | Supabase Storage |
-| AI model | Hugging Face (corrosion object detection) |
-| PDF | jsPDF + jspdf-autotable |
-| Deploy | Cloudflare Workers (auto-deploy via GitHub) |
+| Layer        | Technology                                          |
+| ------------ | --------------------------------------------------- |
+| Frontend     | React 19, TypeScript, Tailwind CSS, TanStack Router |
+| Backend      | Cloudflare Workers                                  |
+| Auth         | Supabase Auth (Google OAuth)                        |
+| Database     | Supabase Postgres (with row-level security)         |
+| File storage | Supabase Storage                                    |
+| AI model     | Hugging Face (corrosion object detection)           |
+| PDF          | jsPDF + jspdf-autotable                             |
+| Deploy       | Cloudflare Workers (auto-deploy via GitHub)         |
 
 ---
 
@@ -65,6 +66,22 @@ Browser → Cloudflare Workers → Supabase (Auth + DB + Storage)
 - Videos upload directly to Supabase Storage with per-user folder isolation
 - Detection results stored in Postgres with row-level security (users only see their own projects)
 - Frame inference calls a remote Hugging Face Space — swap `API_URL` in `src/lib/corrosion-detect.ts` to use your own model
+- Browser-side analysis is capped to a maximum sampled-frame budget so long videos cannot accidentally create hundreds of inference calls
+
+---
+
+## Security and scalability notes
+
+This is a portfolio demo, not a production inspection platform. The current app includes practical guardrails for public sharing:
+
+- 50MB per-video upload validation in the browser and before Supabase upload
+- Per-user Supabase storage paths with randomized object names
+- Per-user project persistence model with RLS policy examples in `supabase/policies.sql`
+- Background save status so users can see whether a project is saved to cloud or only stored in the browser
+- Timeout, retry, and cancellation handling for Hugging Face frame inference
+- Maximum sampled-frame cap to protect the free inference backend from long-video bursts
+
+For real customer usage, the next architecture step would be a backend job queue: upload video, create a job, process frames in a worker, store status/results, then let the UI subscribe or poll.
 
 ---
 

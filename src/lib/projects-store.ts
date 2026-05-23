@@ -9,6 +9,7 @@ export type Detection = {
   area_percent: number;
   box: DetectionBox;
 };
+export type ProjectSaveState = "local" | "saving" | "cloud" | "failed";
 export type Project = {
   id: string;
   name: string;
@@ -19,6 +20,7 @@ export type Project = {
   duration: number;
   fileName?: string;
   framesAnalysed?: number;
+  saveState?: ProjectSaveState;
 };
 
 let projects: Project[] = [];
@@ -55,6 +57,7 @@ export async function loadProjectsFromSupabase() {
     duration: row.duration,
     fileName: row.file_name,
     framesAnalysed: row.frames_analysed,
+    saveState: "cloud",
   }));
   emit();
 }
@@ -77,7 +80,7 @@ export const projectsStore = {
 
     if (!userId) return;
 
-    await supabase.from("projects").upsert({
+    const { error } = await supabase.from("projects").upsert({
       id: p.id,
       user_id: userId,
       name: p.name,
@@ -89,6 +92,8 @@ export const projectsStore = {
       frames_analysed: p.framesAnalysed,
       detections: p.detections,
     });
+
+    if (error) throw error;
   },
   get(id: string) {
     return projects.find((p) => p.id === id);

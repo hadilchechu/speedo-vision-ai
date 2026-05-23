@@ -22,7 +22,7 @@ const models: Model[] = [
     icon: Scan,
     title: "Corrosion Detection — Video",
     project: "Project_corrosion",
-    date: "02 Dec 2021",
+    date: "02 Dec 2025",
   },
   {
     to: null,
@@ -30,7 +30,7 @@ const models: Model[] = [
     icon: Boxes,
     title: "Aircraft Scratch",
     project: "Aircraft_1",
-    date: "01 Dec 2021",
+    date: "01 Mar 2026",
   },
 ];
 
