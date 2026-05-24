@@ -613,47 +613,65 @@ function TimelineTab({
                 <span className="font-normal text-gray-300">|</span>
                 <span>Area {focusedDetection.area_percent.toFixed(1)}%</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(focusedDetection.id);
-                    seekTo(focusedDetection.timestamp);
-                    onConfirmCard(focusedDetection.id, focusedDetection.status);
-                  }}
-                  className={`min-h-[40px] rounded-lg border px-3 text-xs font-semibold ${
-                    focusedDetection.status === "confirmed"
-                      ? "border-[#7bcbbc] bg-[#e8f6f3] text-[#1f6f63]"
-                      : "border-gray-300 bg-white text-gray-700"
+              <div className="flex w-full items-center gap-2">
+                <div
+                  className={`flex min-w-0 flex-1 transition-[gap] duration-200 ease-out ${
+                    focusedDetection.status === "pending" ? "gap-2" : "gap-0"
                   }`}
                 >
-                  {focusedDetection.status === "confirmed" ? "Confirmed" : "Confirm"}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(focusedDetection.id);
+                      seekTo(focusedDetection.timestamp);
+                      onConfirmCard(focusedDetection.id, focusedDetection.status);
+                    }}
+                    aria-hidden={focusedDetection.status === "dismissed"}
+                    tabIndex={focusedDetection.status === "dismissed" ? -1 : 0}
+                    className={`inline-flex min-h-[40px] min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border py-2 text-xs font-semibold transition-[flex-basis,flex-grow,opacity,padding,border-color,background-color,color] duration-200 ease-out ${
+                      focusedDetection.status === "confirmed"
+                        ? "flex-[1_1_0%] border-[#7bcbbc] bg-[#e8f6f3] px-3 text-[#1f6f63]"
+                        : focusedDetection.status === "dismissed"
+                          ? "pointer-events-none flex-[0_1_0px] border-transparent px-0 opacity-0"
+                          : "flex-[1_1_0%] border-gray-300 bg-white px-3 text-gray-700"
+                    }`}
+                  >
+                    {focusedDetection.status === "confirmed" ? "Confirmed" : "Confirm"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(focusedDetection.id);
+                      seekTo(focusedDetection.timestamp);
+                      onDismissCard(focusedDetection.id, focusedDetection.status);
+                    }}
+                    aria-hidden={focusedDetection.status === "confirmed"}
+                    tabIndex={focusedDetection.status === "confirmed" ? -1 : 0}
+                    className={`inline-flex min-h-[40px] min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-lg border py-2 text-xs font-semibold transition-[flex-basis,flex-grow,opacity,padding,border-color,background-color,color] duration-200 ease-out ${
+                      focusedDetection.status === "dismissed"
+                        ? "flex-[1_1_0%] border-gray-300 bg-gray-100 px-3 text-gray-700"
+                        : focusedDetection.status === "confirmed"
+                          ? "pointer-events-none flex-[0_1_0px] border-transparent px-0 opacity-0"
+                          : "flex-[1_1_0%] border-gray-300 bg-white px-3 text-gray-700"
+                    }`}
+                  >
+                    {focusedDetection.status === "dismissed" ? "Dismissed" : "Dismiss"}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedId(focusedDetection.id);
-                    seekTo(focusedDetection.timestamp);
-                    onDismissCard(focusedDetection.id, focusedDetection.status);
-                  }}
-                  className={`min-h-[40px] rounded-lg border px-3 text-xs font-semibold ${
-                    focusedDetection.status === "dismissed"
-                      ? "border-gray-300 bg-gray-100 text-gray-700"
-                      : "border-gray-300 bg-white text-gray-700"
+                  aria-label="Reset detection action"
+                  tabIndex={focusedDetection.status === "pending" ? -1 : 0}
+                  onClick={() => updateStatus(focusedDetection.id, "pending")}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 transition-[opacity,transform,border-color,background-color,color] duration-200 ease-out hover:bg-gray-100 hover:text-gray-700 ${
+                    focusedDetection.status === "pending"
+                      ? "pointer-events-none scale-95 opacity-0"
+                      : "scale-100 opacity-100"
                   }`}
                 >
-                  {focusedDetection.status === "dismissed" ? "Dismissed" : "Dismiss"}
+                  <X className="h-4 w-4" aria-hidden />
                 </button>
               </div>
-              {focusedDetection.status !== "pending" ? (
-                <button
-                  type="button"
-                  onClick={() => updateStatus(focusedDetection.id, "pending")}
-                  className="mt-2 min-h-[36px] w-full rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600"
-                >
-                  Reset decision
-                </button>
-              ) : null}
             </div>
           </div>
 

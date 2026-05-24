@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
-import logoUrl from "@/assets/speedo_logoo.svg";
+import logoUrl from "@/assets/speedo_logoo0.svg";
 import { LoginButton } from "@/components/auth/login-button";
 import { InteractiveDotGrid } from "@/components/interactive-dot-grid";
 
@@ -31,9 +31,9 @@ function Sidebar() {
       <Link
         to="/"
         aria-label="Go to home"
-        className="flex h-16 items-center border-b border-[#E5E7EB] px-5 pt-5"
+        className="flex h-16 items-center border-b border-[#E5E7EB] px-5"
       >
-        <img src={logoUrl} alt="Speedo.ai" className="h-14 w-auto" />
+        <img src={logoUrl} alt="Speedo.ai" className="h-10 w-auto max-w-[165px]" />
       </Link>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
@@ -102,7 +102,7 @@ function MobileHeader() {
             <img
               src={logoUrl}
               alt="Speedo.ai"
-              className="block h-9 w-auto translate-y-1.5 sm:h-11"
+              className="block h-7 w-auto max-w-[150px] translate-y-0.5 sm:h-8"
             />
           </Link>
         </div>
