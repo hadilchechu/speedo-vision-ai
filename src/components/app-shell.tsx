@@ -117,6 +117,9 @@ function ChatBubble() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const showChatBubble = path === "/" || path === "/team" || path === "/settings";
+
   return (
     <div className="min-h-screen bg-[#F0F2F7]" style={{ fontFamily: "Inter, sans-serif" }}>
       <Sidebar />
@@ -127,7 +130,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main className="flex-1 p-8">{children}</main>
         </div>
       </div>
-      <ChatBubble />
+      {showChatBubble ? <ChatBubble /> : null}
     </div>
   );
 }
