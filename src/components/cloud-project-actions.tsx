@@ -1,5 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Braces, Download, FileText, Film, Image as ImageIcon, Trash2 } from "lucide-react";
+import {
+  Braces,
+  Download,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { exportCorrosionPredictionsPdf } from "@/lib/corrosion-pdf-export";
@@ -10,7 +18,12 @@ import { projectsStore, formatTimestamp } from "@/lib/projects-store";
 export type ReviewedDetection = Detection & { id: number; status: string };
 
 function safeFileSlug(name: string): string {
-  return name.replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "project";
+  return (
+    name
+      .replace(/[^\w-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "project"
+  );
 }
 
 function clickDownload(url: string, filename: string) {
@@ -76,7 +89,10 @@ function seekVideo(video: HTMLVideoElement, timestamp: number): Promise<void> {
   });
 }
 
-function detectionsNearTime(detections: ReviewedDetection[], timestamp: number): ReviewedDetection[] {
+function detectionsNearTime(
+  detections: ReviewedDetection[],
+  timestamp: number,
+): ReviewedDetection[] {
   return detections.filter((d) => Math.abs(d.timestamp - timestamp) <= 0.45);
 }
 
@@ -185,7 +201,11 @@ async function exportInspectionJpeg(
     ctx.fillText(`Image ${index + 1}`, 96, y + 26);
     ctx.fillStyle = "#2E86AB";
     ctx.font = "600 17px Inter, Arial, sans-serif";
-    ctx.fillText(`${formatTimestamp(d.timestamp)} · ${d.confidence.toFixed(1)}% · ${d.status}`, 260, y + 26);
+    ctx.fillText(
+      `${formatTimestamp(d.timestamp)} · ${d.confidence.toFixed(1)}% · ${d.status}`,
+      260,
+      y + 26,
+    );
     ctx.fillStyle = "#6B7280";
     ctx.fillText(`Area ${d.area_percent.toFixed(1)}%`, 560, y + 26);
   });
@@ -226,7 +246,8 @@ export function downloadProjectManifest(project: Project, detections?: ReviewedD
       detections: detections?.length ?? project.detections.length,
       confirmed: detections?.filter((d) => d.status === "confirmed").length ?? 0,
       dismissed: detections?.filter((d) => d.status === "dismissed").length ?? 0,
-      pending: detections?.filter((d) => d.status === "pending").length ?? project.detections.length,
+      pending:
+        detections?.filter((d) => d.status === "pending").length ?? project.detections.length,
     },
     detections:
       detections?.map((d) => ({
@@ -244,15 +265,9 @@ export function downloadProjectManifest(project: Project, detections?: ReviewedD
 }
 
 const actionButton =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-white px-4 text-xs font-semibold tracking-wide uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-[#2E86AB]/30 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-lg border bg-white px-3 text-[11px] font-semibold tracking-wide uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-[#2E86AB]/30 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:text-xs";
 
-function TooltipIconButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
+function TooltipIconButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <div className="group relative">
       <button
@@ -294,10 +309,42 @@ export function ProjectDownloadVideoButton({ project }: { project: Project }) {
       type="button"
       disabled={exportingVideo}
       onClick={() => void onDownloadVideo()}
-      className={`${actionButton} border-[#2E86AB] text-[#2E86AB] hover:bg-[#EEF2FF]`}
+      className={`${actionButton} flex-1 border-[#2E86AB] text-[#2E86AB] hover:bg-[#EEF2FF] sm:flex-none`}
     >
       <Film className="h-4 w-4" />
-      Download Video
+      <span className="hidden sm:inline">Download </span>Video
+    </button>
+  );
+}
+
+function ProjectActionsMenuItem({
+  icon: Icon,
+  label,
+  tone = "default",
+  disabled,
+  onClick,
+}: {
+  icon: typeof Download;
+  label: string;
+  tone?: "default" | "danger";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={disabled}
+      className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50 ${
+        tone === "danger" ? "text-red-700" : "text-gray-800"
+      }`}
+      onClick={onClick}
+    >
+      <Icon
+        className={`h-4 w-4 shrink-0 ${tone === "danger" ? "text-red-600" : "text-gray-600"}`}
+        aria-hidden
+      />
+      {label}
     </button>
   );
 }
@@ -314,6 +361,7 @@ export function ProjectActionGroup({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [exportingVideo, setExportingVideo] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -337,7 +385,10 @@ export function ProjectActionGroup({
       toast.info("Featured demo projects cannot be removed.");
       return;
     }
-    if (!confirm("Remove this project from your list? The video stays only in this browser session.")) return;
+    if (
+      !confirm("Remove this project from your list? The video stays only in this browser session.")
+    )
+      return;
     projectsStore.remove(project.id);
     toast.success("Project removed.");
     void navigate({ to: "/models/corrosion" });
@@ -364,60 +415,84 @@ export function ProjectActionGroup({
     }
   };
 
+  const runVideoExport = async () => {
+    setOpen(false);
+    if (exportingVideo) return;
+    setExportingVideo(true);
+    const toastId = toast.loading("Rendering video export...");
+    try {
+      await exportAnnotatedCorrosionVideo(project);
+      toast.success("Annotated video downloaded.", { id: toastId });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not export annotated video.", {
+        id: toastId,
+      });
+    } finally {
+      setExportingVideo(false);
+    }
+  };
+
   return (
-    <div className="flex flex-nowrap items-center justify-end gap-2">
-      <TooltipIconButton label="Remove Project" onClick={onRemove} />
-      <ProjectDownloadVideoButton project={project} />
-      <div className="relative" ref={ref}>
+    <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+      <div className="hidden flex-nowrap items-center justify-end gap-2 sm:flex">
+        <TooltipIconButton label="Remove Project" onClick={onRemove} />
+        <ProjectDownloadVideoButton project={project} />
+      </div>
+      <div className="relative flex-1 sm:flex-none" ref={ref}>
         <button
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
           disabled={busy}
           onClick={() => setOpen((o) => !o)}
-          className={`${actionButton} border-[#2E86AB] text-[#2E86AB] hover:bg-[#EEF2FF]`}
+          className={`${actionButton} ml-auto h-9 w-9 border-transparent bg-transparent px-0 text-gray-500 hover:bg-gray-100 hover:text-[#2E86AB] sm:h-10 sm:w-auto sm:border-[#2E86AB] sm:bg-white sm:px-4 sm:text-[#2E86AB] sm:hover:bg-[#EEF2FF]`}
         >
-          <Download className="h-4 w-4" />
-          Export
+          <MoreHorizontal className="h-5 w-5 sm:hidden" />
+          <Download className="hidden h-4 w-4 sm:block" />
+          <span className="hidden sm:inline">Export</span>
         </button>
         <div
           role="menu"
-          className={`absolute right-0 top-full z-20 mt-2 min-w-[210px] origin-top-right rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-md transition duration-150 ${
+          className={`absolute right-0 top-full z-50 mt-2 min-w-[210px] origin-top-right rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-md transition duration-150 ${
             open
               ? "pointer-events-auto scale-100 opacity-100"
               : "pointer-events-none scale-95 opacity-0"
           }`}
         >
-          <button
-            type="button"
-            role="menuitem"
+          <div className="sm:hidden">
+            <ProjectActionsMenuItem
+              icon={Trash2}
+              label="Remove project"
+              tone="danger"
+              disabled={busy || exportingVideo}
+              onClick={onRemove}
+            />
+            <ProjectActionsMenuItem
+              icon={Film}
+              label="Download video"
+              disabled={busy || exportingVideo}
+              onClick={() => void runVideoExport()}
+            />
+            <div className="my-1 border-t border-[#F0F2F7]" />
+          </div>
+          <ProjectActionsMenuItem
+            icon={FileText}
+            label="Export as PDF"
             disabled={busy}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
             onClick={() => void runExport("pdf")}
-          >
-            <FileText className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-            Export as PDF
-          </button>
-          <button
-            type="button"
-            role="menuitem"
+          />
+          <ProjectActionsMenuItem
+            icon={ImageIcon}
+            label="Export as JPEG"
             disabled={busy}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
             onClick={() => void runExport("jpeg")}
-          >
-            <ImageIcon className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-            Export as JPEG
-          </button>
-          <button
-            type="button"
-            role="menuitem"
+          />
+          <ProjectActionsMenuItem
+            icon={Braces}
+            label="Export as JSON"
             disabled={busy}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
             onClick={() => void runExport("json")}
-          >
-            <Braces className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-            Export as JSON
-          </button>
+          />
         </div>
       </div>
     </div>

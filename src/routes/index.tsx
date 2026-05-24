@@ -42,14 +42,14 @@ function ModelCard({ model }: { model: Model }) {
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
           <Icon className="h-4 w-4 text-[#2E86AB]" />
         </div>
-        <span className="text-xs font-semibold text-[#2E86AB] uppercase tracking-wide">
+        <span className="min-w-0 text-xs font-semibold text-[#2E86AB] uppercase tracking-wide">
           {model.type}
         </span>
       </div>
       <h3 className="mb-8 text-base font-semibold text-gray-900">{model.title}</h3>
-      <div className="flex items-center justify-between border-t border-[#F0F2F7] pt-3 text-xs text-gray-500">
-        <span>{model.project}</span>
-        <span>{model.date}</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-[#F0F2F7] pt-3 text-xs text-gray-500">
+        <span className="min-w-0 truncate">{model.project}</span>
+        <span className="shrink-0">{model.date}</span>
       </div>
     </>
   );
@@ -74,7 +74,7 @@ function ModelsListPage() {
   return (
     <AppShell>
       <p className="mb-3 text-sm text-gray-400">Select model</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {models.map((m) => (
           <ModelCard key={m.title} model={m} />
         ))}

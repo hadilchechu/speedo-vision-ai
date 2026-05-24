@@ -165,14 +165,16 @@ function CorrosionModelPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">Corrosion Detection — Video</h1>
+      <h1 className="mb-6 text-2xl font-semibold leading-tight text-gray-900">
+        Corrosion Detection — Video
+      </h1>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-[18px] font-bold text-gray-900">Projects</h2>
 
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
               <button
                 type="button"
                 onClick={() => setOpenImport(true)}
@@ -193,7 +195,7 @@ function CorrosionModelPage() {
           </div>
 
           <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="relative w-1/3 min-w-[180px]">
+            <div className="relative min-w-0 flex-1 sm:w-1/3 sm:min-w-[180px] sm:flex-none">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 
               <input
@@ -240,64 +242,72 @@ function CorrosionModelPage() {
                   key={p.id}
                   to="/models/corrosion/$projectId"
                   params={{ projectId: p.id }}
-                  className="group flex items-center gap-4 rounded-lg border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10"
+                  className="group flex flex-col gap-3 rounded-lg border border-[#E5E7EB] bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/45 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-1 hover:ring-[#2E86AB]/10 sm:flex-row sm:items-center sm:gap-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
-                    <Folder className="h-5 w-5 text-[#2E86AB]" />
-                  </div>
+                  <div className="flex min-w-0 items-start gap-3 sm:flex-1 sm:items-center sm:gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
+                      <Folder className="h-5 w-5 text-[#2E86AB]" />
+                    </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-gray-900">{p.name}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-gray-900">{p.name}</div>
 
-                    <div className="mt-0.5 text-xs text-gray-500">
-                      Last inspected: {p.createdAt}
+                      <div className="mt-0.5 text-xs leading-5 text-gray-500">
+                        Last inspected: {p.createdAt}
+                      </div>
                     </div>
                   </div>
 
-                  <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
-                    {p.detections.length} detections
-                  </span>
+                  <div className="flex items-center gap-2 pl-[52px] sm:pl-0">
+                    <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                      {p.detections.length} detections
+                    </span>
 
-                  <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                    {p.status}
-                  </span>
+                    <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                      {p.status}
+                    </span>
 
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
+                    <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
+                  </div>
                 </Link>
               ))}
 
               {showBundledDemo && (
                 <Link
                   to="/models/corrosion/pipeline-inspection-01"
-                  className="group flex items-center gap-4 rounded-lg border border-[#2E86AB]/25 bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20"
+                  className="group flex flex-col gap-3 rounded-lg border border-[#2E86AB]/25 bg-white/95 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-[#2E86AB]/10 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#2E86AB]/55 hover:bg-white hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] hover:ring-[#2E86AB]/20 sm:flex-row sm:items-center sm:gap-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
-                    <Folder className="h-5 w-5 text-[#2E86AB]" />
+                  <div className="flex min-w-0 items-start gap-3 sm:flex-1 sm:items-center sm:gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] transition-colors group-hover:bg-[#E1F1F8]">
+                      <Folder className="h-5 w-5 text-[#2E86AB]" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">
+                        Bundled demo
+                      </div>
+
+                      <div className="truncate text-sm font-bold text-gray-900">
+                        {STATIC_FEATURED_DEMO.name}
+                      </div>
+
+                      <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-gray-500">
+                        Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[#2E86AB]">
-                      Bundled demo
-                    </div>
+                  <div className="flex items-center gap-2 pl-[52px] sm:pl-0">
+                    <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
+                      {STATIC_FEATURED_DEMO.detections.length} detections
+                    </span>
 
-                    <div className="truncate text-sm font-bold text-gray-900">
-                      {STATIC_FEATURED_DEMO.name}
-                    </div>
+                    <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
+                      {STATIC_FEATURED_DEMO.status}
+                    </span>
 
-                    <div className="mt-0.5 text-xs text-gray-500">
-                      Video and analysis ship with this deploy · {STATIC_FEATURED_DEMO.createdAt}
-                    </div>
+                    <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
                   </div>
-
-                  <span className="shrink-0 rounded bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700">
-                    {STATIC_FEATURED_DEMO.detections.length} detections
-                  </span>
-
-                  <span className="shrink-0 rounded bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700">
-                    {STATIC_FEATURED_DEMO.status}
-                  </span>
-
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-[#2E86AB]" />
                 </Link>
               )}
             </div>
@@ -380,8 +390,6 @@ function CorrosionModelPage() {
               <StatCard label="Frames Analysed" value="824 / 838" />
               <StatCard label="Defects Marked" value="347" />
             </div>
-
-            
 
             <div className="mt-4 divide-y divide-[#F0F2F7] rounded-lg border border-[#E5E7EB] bg-white px-4">
               <MetaRow label="Project Name" value="Project_corrosion_video" />

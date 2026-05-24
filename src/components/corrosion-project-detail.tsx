@@ -13,6 +13,8 @@ import {
   Cloud,
   HardDrive,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -53,23 +55,27 @@ export function CorrosionProjectDetail({
 
   return (
     <AppShell>
-      <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{project.name}</h1>
+      <div className="mb-2 flex items-start justify-between gap-3 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words text-2xl font-semibold leading-tight text-gray-900 sm:text-2xl">
+            {project.name}
+          </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-            <span>Corrosion Detection — Video · {project.createdAt}</span>
+            <span className="min-w-0">Corrosion Detection — Video · {project.createdAt}</span>
             <SaveStateBadge state={project.saveState} />
           </div>
         </div>
-        <ProjectActionGroup project={displayProject} detections={detections} activeTab={active} />
+        <div className="shrink-0">
+          <ProjectActionGroup project={displayProject} detections={detections} activeTab={active} />
+        </div>
       </div>
-      <div className="mb-6 mt-4 border-b border-[#E5E7EB]">
-        <div className="flex gap-6">
+      <div className="mb-4 mt-3 overflow-x-auto border-b border-[#E5E7EB] sm:mb-6 sm:mt-4">
+        <div className="flex min-w-max gap-5 sm:gap-6">
           {tabs.map((t) => (
             <button
               key={t}
               onClick={() => setActive(t)}
-              className={`rounded-md px-1 pb-3 text-sm font-medium transition-colors -mb-px ${
+              className={`-mb-px rounded-md px-1 pb-3 text-sm font-medium transition-colors ${
                 active === t
                   ? "border-b-2 border-[#2E86AB] text-[#2E86AB]"
                   : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
@@ -414,13 +420,24 @@ function TimelineTab({
   }
 
   const progressPct = project.duration ? (currentTime / project.duration) * 100 : 0;
+  const focusedIndex = Math.max(
+    0,
+    detections.findIndex((d) => d.id === (selectedId ?? detections[0]?.id)),
+  );
+  const focusedDetection = detections[focusedIndex] ?? detections[0]!;
+  const showFocusedDetection = (index: number) => {
+    const next = detections[Math.min(Math.max(0, index), detections.length - 1)];
+    if (!next) return;
+    setSelectedId(next.id);
+    seekTo(next.timestamp);
+  };
 
   const videoCardClasses = expandedVideo
     ? "fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[min(80vw,1400px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-2xl"
-    : "rounded-lg border border-[#E5E7EB] bg-white p-4";
+    : "rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-4";
 
   return (
-    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-3 lg:gap-6">
       {expandedVideo ? (
         <button
           type="button"
@@ -430,7 +447,7 @@ function TimelineTab({
         />
       ) : null}
       <div
-        className={`space-y-4 lg:sticky lg:top-8 lg:col-span-2 ${
+        className={`sticky top-[72px] z-10 space-y-3 lg:top-8 lg:col-span-2 lg:z-20 lg:space-y-4 ${
           expandedVideo ? "relative z-50" : ""
         }`}
       >
@@ -476,7 +493,7 @@ function TimelineTab({
               </div>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-3 px-1">
+          <div className="mt-3 flex items-center gap-2 px-1 sm:mt-4 sm:gap-3">
             <button
               type="button"
               onClick={togglePlay}
@@ -488,7 +505,7 @@ function TimelineTab({
                 <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
               )}
             </button>
-            <span className="shrink-0 font-mono text-xs text-gray-600">
+            <span className="shrink-0 font-mono text-[11px] text-gray-600 sm:text-xs">
               {formatTimestamp(currentTime)} / {formatTimestamp(project.duration)}
             </span>
             <div className="relative h-2 flex-1 rounded-full bg-gray-200">
@@ -518,7 +535,7 @@ function TimelineTab({
             <button
               type="button"
               onClick={() => setExpandedVideo(true)}
-              className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#2E86AB]"
+              className="shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-[#2E86AB] sm:p-2"
               aria-label="Enlarge video"
             >
               <Maximize className="h-4 w-4" />
@@ -539,18 +556,108 @@ function TimelineTab({
         </div>
       </div>
 
-      <div className="space-y-4">
-        <InspectionSummary>
-          Analysis complete. {detections.length} instances of corrosion detected across{" "}
-          {formatTimestamp(project.duration)} of footage.
-        </InspectionSummary>
-        <div className="rounded-lg border border-[#E5E7EB] bg-white p-5">
-          <h3 className="mb-3 text-base font-bold text-gray-900">Frame Detections</h3>
-          <div className="mb-4 border-b border-[#F0F2F7] pb-3 text-xs text-gray-500">
+      <div className="space-y-3 lg:space-y-4">
+        <div className="hidden sm:block">
+          <InspectionSummary>
+            Analysis complete. {detections.length} instances of corrosion detected across{" "}
+            {formatTimestamp(project.duration)} of footage.
+          </InspectionSummary>
+        </div>
+        <div className="rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-5">
+          <h3 className="mb-2 text-base font-bold text-gray-900 sm:mb-3">Frame Detections</h3>
+          <div className="mb-3 border-b border-[#F0F2F7] pb-2 text-xs text-gray-500 sm:mb-4 sm:pb-3">
             {detections.length} detections · {confirmed} confirmed · {dismissed} dismissed ·{" "}
             {pending} pending
           </div>
-          <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
+          <div className="lg:hidden">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {focusedIndex + 1} of {detections.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={focusedIndex === 0}
+                  onClick={() => showFocusedDetection(focusedIndex - 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous detection"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={focusedIndex === detections.length - 1}
+                  onClick={() => showFocusedDetection(focusedIndex + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next detection"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#2E86AB] bg-[#EEF2FF] p-3">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold text-gray-900">Image {focusedIndex + 1}</div>
+                  <div className="mt-0.5 text-xs text-gray-500">
+                    {formatTimestamp(focusedDetection.timestamp)}
+                  </div>
+                </div>
+                <span className="shrink-0 text-xs font-medium capitalize text-gray-600">
+                  {focusedDetection.status}
+                </span>
+              </div>
+              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-semibold text-[#2E86AB]">
+                <span>Accuracy {focusedDetection.confidence.toFixed(1)}%</span>
+                <span className="font-normal text-gray-300">|</span>
+                <span>Area {focusedDetection.area_percent.toFixed(1)}%</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(focusedDetection.id);
+                    seekTo(focusedDetection.timestamp);
+                    onConfirmCard(focusedDetection.id, focusedDetection.status);
+                  }}
+                  className={`min-h-[40px] rounded-lg border px-3 text-xs font-semibold ${
+                    focusedDetection.status === "confirmed"
+                      ? "border-[#7bcbbc] bg-[#e8f6f3] text-[#1f6f63]"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                >
+                  {focusedDetection.status === "confirmed" ? "Confirmed" : "Confirm"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(focusedDetection.id);
+                    seekTo(focusedDetection.timestamp);
+                    onDismissCard(focusedDetection.id, focusedDetection.status);
+                  }}
+                  className={`min-h-[40px] rounded-lg border px-3 text-xs font-semibold ${
+                    focusedDetection.status === "dismissed"
+                      ? "border-gray-300 bg-gray-100 text-gray-700"
+                      : "border-gray-300 bg-white text-gray-700"
+                  }`}
+                >
+                  {focusedDetection.status === "dismissed" ? "Dismissed" : "Dismiss"}
+                </button>
+              </div>
+              {focusedDetection.status !== "pending" ? (
+                <button
+                  type="button"
+                  onClick={() => updateStatus(focusedDetection.id, "pending")}
+                  className="mt-2 min-h-[36px] w-full rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-600"
+                >
+                  Reset decision
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="hidden space-y-3 pr-0 lg:block lg:max-h-[600px] lg:overflow-y-auto lg:pr-1">
             {detections.map((d, imageIndex) => {
               const imageLabel = `Image ${imageIndex + 1}`;
               const isDismissed = d.status === "dismissed";
@@ -688,16 +795,16 @@ function PredictionStatCard({
 }) {
   return (
     <div
-      className={`rounded-lg border border-[#E5E7EB] bg-white p-5 ${clickable ? "cursor-pointer transition hover:border-[#2E86AB]" : ""}`}
+      className={`rounded-lg border border-[#E5E7EB] bg-white p-4 sm:p-5 ${clickable ? "cursor-pointer transition hover:border-[#2E86AB]" : ""}`}
     >
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#EEF2FF]">
           <Icon className="h-4 w-4 text-[#2E86AB]" />
         </div>
-        <span className="text-sm text-gray-500">{label}</span>
+        <span className="text-sm leading-5 text-gray-500">{label}</span>
       </div>
       {value ? (
-        <div className="text-3xl font-bold text-gray-900">{value}</div>
+        <div className="text-2xl font-bold text-gray-900 sm:text-3xl">{value}</div>
       ) : (
         <div className="text-sm font-semibold text-[#2E86AB]">View all →</div>
       )}
@@ -716,13 +823,6 @@ function PredictionsTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <PredictionStatCard icon={Gauge} label="Average Prediction Score" value={avgScore} />
-        <PredictionStatCard icon={Crosshair} label="Mean Average Precision" value="0.8" />
-        <PredictionStatCard icon={BarChart3} label="Average Annotated Area" value={avgArea} />
-        <PredictionStatCard icon={MoreHorizontal} label="More Stats" clickable />
-      </div>
-
       <div className="space-y-3">
         {detections.map((d, i) => (
           <div
@@ -757,6 +857,13 @@ function PredictionsTab({ project }: { project: Project }) {
             />
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <PredictionStatCard icon={Gauge} label="Average Prediction Score" value={avgScore} />
+        <PredictionStatCard icon={Crosshair} label="Mean Average Precision" value="0.8" />
+        <PredictionStatCard icon={BarChart3} label="Average Annotated Area" value={avgArea} />
+        <PredictionStatCard icon={MoreHorizontal} label="More Stats" clickable />
       </div>
     </div>
   );

@@ -1,8 +1,17 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, Users, Settings as SettingsIcon, MessageCircle, ArrowLeft } from "lucide-react";
+import {
+  Boxes,
+  Users,
+  Settings as SettingsIcon,
+  MessageCircle,
+  ArrowLeft,
+  Menu,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import logoUrl from "@/assets/logo.png";
+import logoUrl from "@/assets/speedo_logoo.svg";
 import { LoginButton } from "@/components/auth/login-button";
 import { InteractiveDotGrid } from "@/components/interactive-dot-grid";
 
@@ -16,7 +25,7 @@ function Sidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <aside
-      className="fixed inset-y-0 left-0 w-[220px] bg-white border-r border-[#E5E7EB] flex flex-col"
+      className="fixed inset-y-0 left-0 hidden w-[220px] flex-col border-r border-[#E5E7EB] bg-white lg:flex"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
       <Link
@@ -72,6 +81,63 @@ function Sidebar() {
   );
 }
 
+function MobileHeader() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-30 border-b border-[#E5E7EB] bg-white lg:hidden">
+      <div className="flex h-16 items-center justify-between gap-2 px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label={open ? "Close navigation" : "Open navigation"}
+            aria-expanded={open}
+            onClick={() => setOpen((value) => !value)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-transparent text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <Link to="/" aria-label="Go to home" className="flex min-w-0 shrink-0 items-center">
+            <img
+              src={logoUrl}
+              alt="Speedo.ai"
+              className="block h-9 w-auto translate-y-1.5 sm:h-11"
+            />
+          </Link>
+        </div>
+        <div className="min-w-0 scale-[0.86] origin-right">
+          <LoginButton />
+        </div>
+      </div>
+      {open ? (
+        <nav className="border-t border-[#F0F2F7] px-3 py-2">
+          <div className="space-y-1 rounded-xl border border-[#E5E7EB] bg-white p-2 shadow-sm">
+            {navItems.map((item) => {
+              const active =
+                item.to === "/" ? path === "/" || path.startsWith("/models") : path === item.to;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active ? "bg-[#EEF2FF] text-[#2E86AB]" : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${active ? "text-[#2E86AB]" : "text-gray-500"}`} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      ) : null}
+    </header>
+  );
+}
+
 function TopBar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   let back: { to: string; label: string } | null = null;
@@ -84,7 +150,7 @@ function TopBar() {
   }
   const modelsHomeTitle = path === "/" && !back;
   return (
-    <div className="flex items-center justify-between h-16 px-8 bg-white border-b border-[#E5E7EB]">
+    <div className="hidden h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-8 lg:flex">
       <div>
         {back ? (
           <Link
@@ -121,13 +187,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const showChatBubble = path === "/" || path === "/team" || path === "/settings";
 
   return (
-    <div className="min-h-screen bg-[#F0F2F7]" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div
+      className="min-h-screen overflow-x-hidden bg-[#F0F2F7]"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
       <Sidebar />
-      <div className="relative ml-[220px] min-h-screen">
+      <div className="relative min-h-screen lg:ml-[220px]">
         <InteractiveDotGrid />
         <div className="relative z-10 flex min-h-screen flex-col">
+          <MobileHeader />
           <TopBar />
-          <main className="flex-1 p-8">{children}</main>
+          <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
         </div>
       </div>
       {showChatBubble ? <ChatBubble /> : null}
